@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import logoMain from './assets/logo1.jpg';
 import { 
   Calendar as ViewCalendarIcon,
   Users as UsersIcon,
@@ -40,7 +41,6 @@ const logoTeacher = 'https://placehold.co/400x200/e0e7ff/4f46e5?text=Teacher+Log
 const logoAdmin = 'https://placehold.co/400x200/e0e7ff/4f46e5?text=Admin+Logo';
 const logoContact = 'https://placehold.co/800x400/0f172a/ffffff?text=Rebuild+Training+Lab';
 const logoShop = 'https://placehold.co/400x200/fff7ed/ea580c?text=Shop+Logo';
-const logoMain = 'https://placehold.co/400x200/ffffff/000000?text=Main+Logo';
 
 const MAX_CAPACITY = 4;
 
