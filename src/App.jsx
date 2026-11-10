@@ -1,5 +1,4 @@
-import React, { useState } from 'react';
-import logoMain from './assets/logo1.jpg';
+import React, { useState, useRef } from 'react';
 import { 
   Calendar as ViewCalendarIcon,
   Users as UsersIcon,
@@ -34,13 +33,17 @@ import {
   Search as SearchIcon,
   TrendingUp as TrendingUpIcon,
   TrendingDown as TrendingDownIcon,
-  Trophy as TrophyIcon
+  Trophy as TrophyIcon,
+  MapPin as MapPinIcon,
+  Phone as PhoneIcon,
+  MessageCircle as MessageCircleIcon
 } from 'lucide-react';
 
 const logoTeacher = 'https://placehold.co/400x200/e0e7ff/4f46e5?text=Teacher+Logo';
 const logoAdmin = 'https://placehold.co/400x200/e0e7ff/4f46e5?text=Admin+Logo';
 const logoContact = 'https://placehold.co/800x400/0f172a/ffffff?text=Rebuild+Training+Lab';
 const logoShop = 'https://placehold.co/400x200/fff7ed/ea580c?text=Shop+Logo';
+const logoMain = 'https://placehold.co/400x200/ffffff/000000?text=Main+Logo';
 
 const MAX_CAPACITY = 4;
 
@@ -68,7 +71,7 @@ const INITIAL_TAG_CATEGORIES = {
   }
 };
 
-export default function ZhudongBookingApp() {
+function App() {
   // --- State Management ---
   const [view, setView] = useState('customer');
   
@@ -101,12 +104,28 @@ export default function ZhudongBookingApp() {
   const [editingProfileName, setEditingProfileName] = useState(''); 
   const [uploadedPhoto, setUploadedPhoto] = useState('');
 
+  // 約課精靈流程狀態 (新增與定位)
+  const [bookingStep, setBookingStep] = useState(1);
+  const stepContainerRef = useRef(null);
+
+  const scrollToStep = () => {
+    setTimeout(() => {
+      if (stepContainerRef.current) {
+        // block: 'start' 加上 CSS scroll-mt 可以達到完美的偏移效果，避開固定的頂部導覽列
+        stepContainerRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    }, 50); // 些微延遲確保 DOM 已更新
+  };
+
+  const [customerForm, setCustomerForm] = useState({
+    name: '', phone: '', referral: '', concern: '', hasMedical: false, medicalDetails: ''
+  });
+
   const [bookingDuration, setBookingDuration] = useState(90); 
   const [bookingStartTime, setBookingStartTime] = useState('10:00');
-  const [hasMedicalCondition, setHasMedicalCondition] = useState(false);
   
   // 約課與兩步篩選法狀態
-  const [bookingFlowType, setBookingFlowType] = useState('guided'); // 'guided' (導引配對) 或 'direct' (直接指定)
+  const [bookingFlowType, setBookingFlowType] = useState('direct'); // 'guided' (導引配對) 或 'direct' (直接指定)
   const [bookingIntent, setBookingIntent] = useState(null); // 'relax' 或 'train'
   const [selectedTags, setSelectedTags] = useState([]);
 
@@ -159,6 +178,7 @@ export default function ZhudongBookingApp() {
   const [selectedProgressIndex, setSelectedProgressIndex] = useState(0); 
 
   const [adminTab, setAdminTab] = useState('courses'); 
+  const [customerSearch, setCustomerSearch] = useState('');
   const [contactRequests, setContactRequests] = useState([
     { id: 'c1', companyName: '示範科技股份有限公司', contactName: '王經理', phone: '0912-345-678', email: 'hr@example.com', serviceType: 'speech', eventDate: '2026-12-15', details: '希望舉辦一場兩小時的員工肩頸放鬆與體適能講座。', status: 'pending', createdAt: '2026-11-05' }
   ]);
@@ -167,7 +187,19 @@ export default function ZhudongBookingApp() {
     heroTitle: '讓健康成為日常',
     heroSubtitle: '健康不是短暫的結果，是一段需要持續累積的過程',
     heroDescription: '來築動，讓運動防護師陪伴您＃讓健康成為日常',
-    heroImage: logoMain
+    heroImage: logoMain,
+    service1Title: '運動按摩',
+    service1Desc: '透過專業的手法放鬆深層筋膜，精準解除激痛點。適合長期的肌肉緊繃、運動後的疲勞恢復，以及改善因代償產生的痠痛問題。',
+    service2Title: '運動訓練',
+    service2Desc: '不是盲目舉重，而是建立正確發力與身體張力。強化核心與肌力，提升運動表現並預防受傷，為身體打下最穩固的基礎。',
+    service3Title: '機能重建',
+    service3Desc: '專為受傷後、開刀後或長期姿勢不良者設計。循序漸進地找回關節活動度與神經控制力，安全地重返正常生活與運動場。',
+    lineId: '@zhudong_rebuild (預約與客服)', lineLink: '#',
+    fbName: '築動運動防護中心', fbLink: '#',
+    igName: '@zhudong.lab (日常防護知識)', igLink: '#',
+    address: '台北市中山區南京東路 XXX 號 2 樓',
+    phone: '02-2500-XXXX',
+    mapUrl: 'https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3614.4676874538837!2d121.53123847604654!3d25.0521328778059!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x3442a967a5b3a6cd%3A0x6e7ed6c6a469a4d8!2z5Lit5bGx5Y2A!5e0!3m2!1szh-TW!2stw!4v1700000000000!5m2!1szh-TW!2stw'
   });
   const [aboutUploadedPhoto, setAboutUploadedPhoto] = useState('');
 
@@ -611,7 +643,14 @@ export default function ZhudongBookingApp() {
       heroTitle: formData.get('heroTitle'),
       heroSubtitle: formData.get('heroSubtitle'),
       heroDescription: formData.get('heroDescription'),
-      heroImage: aboutUploadedPhoto || aboutContent.heroImage
+      heroImage: aboutUploadedPhoto || aboutContent.heroImage,
+      service1Title: formData.get('service1Title'), service1Desc: formData.get('service1Desc'),
+      service2Title: formData.get('service2Title'), service2Desc: formData.get('service2Desc'),
+      service3Title: formData.get('service3Title'), service3Desc: formData.get('service3Desc'),
+      lineId: formData.get('lineId'), lineLink: formData.get('lineLink'),
+      fbName: formData.get('fbName'), fbLink: formData.get('fbLink'),
+      igName: formData.get('igName'), igLink: formData.get('igLink'),
+      address: formData.get('address'), phone: formData.get('phone'), mapUrl: formData.get('mapUrl')
     });
     showToast('品牌介紹與主視覺更新成功！');
   };
@@ -650,18 +689,11 @@ export default function ZhudongBookingApp() {
   const handleDeleteEvent = (id) => { setRecentEvents(prev => prev.filter(ev => ev.id !== id)); showToast('已刪除該筆活動紀錄！'); };
   const cancelEventEdit = () => { setEditingEventId(''); setEventUploadedPhoto(''); };
 
-  const handleBookAppointment = (e) => {
-    e.preventDefault();
-    const formData = new FormData(e.target);
-    const name = formData.get('customerName');
-    const phone = formData.get('phone'); 
-    const reqStartTime = formData.get('startTime');
-    const duration = parseInt(formData.get('duration'), 10);
-    const targetTeacher = formData.get('targetTeacher');
-    const referral = formData.get('referral') || '';
-    const concern = formData.get('concern') || '';
-    const hasMedical = formData.get('hasMedical') === 'on';
-    const medicalDetails = formData.get('medicalDetails') || '';
+  const handleConfirmBookingSubmit = () => {
+    const { name, phone, referral, concern, hasMedical, medicalDetails } = customerForm;
+    const reqStartTime = bookingStartTime;
+    const duration = bookingDuration;
+    const targetTeacher = selectedTeacher;
     
     if (!name.trim() || !phone.trim()) { showToast('請輸入真實姓名與聯絡電話才能預約喔！'); return; }
     if (!duration || isNaN(duration)) { showToast('請選擇課程長度！'); return; }
@@ -708,9 +740,17 @@ export default function ZhudongBookingApp() {
     };
     
     setAppointments(prev => [...prev, newAp].sort((a, b) => timeToMins(a.startTime) - timeToMins(b.startTime)));
-    showToast('預約成功！期待您的到來。');
-    setBookingDuration(90); setBookingStartTime('10:00'); setHasMedicalCondition(false);
-    e.target.reset();
+    showToast('🎉 預約成功！期待您的到來。');
+    
+    // Reset wizard state
+    setCustomerForm({ name: '', phone: '', referral: '', concern: '', hasMedical: false, medicalDetails: '' });
+    setBookingDuration(90); 
+    setBookingStartTime('10:00'); 
+    setSelectedTeacher('all');
+    setBookingIntent(null);
+    setSelectedTags([]);
+    setBookingStep(1);
+    scrollToStep();
   };
 
   const handleCancelAppointment = (id) => { setAppointments(prev => prev.filter(ap => ap.id !== id)); showToast('已取消該筆預約。'); };
@@ -1057,7 +1097,7 @@ export default function ZhudongBookingApp() {
     };
 
     return (
-      <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-4 md:p-6 mb-6">
+      <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-3 md:p-6 mb-4">
         <div className="flex items-center justify-between mb-4">
           <button onClick={() => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1, 1))} className="p-2 hover:bg-slate-100 rounded-full transition-colors text-slate-600">
             <ChevronLeftIcon />
@@ -1113,45 +1153,41 @@ export default function ZhudongBookingApp() {
   };
 
   return (
-    <div className="min-h-screen bg-[#FAF9F6] text-slate-800 font-sans selection:bg-indigo-100 selection:text-indigo-900 pb-20">
+    <div className="min-h-screen bg-[#FAF9F6] text-slate-800 font-sans selection:bg-indigo-100 selection:text-indigo-900 pb-24 relative">
       {/* Top Navigation Bar */}
       <header className="bg-white shadow-sm border-b border-slate-100 sticky top-0 z-40">
-        <div className="max-w-6xl mx-auto px-4 py-3 flex flex-col xl:flex-row items-center justify-between gap-4 xl:gap-8">
-          <div className="flex flex-col md:flex-row items-center gap-4 md:gap-6 w-full xl:w-auto">
-            <div className="flex items-center gap-3 cursor-pointer hover:opacity-80 transition-opacity" onClick={() => setView('customer')}>
-              <img src={logoMain} alt="築動 Rebuild Logo" className="h-12 md:h-14 object-contain mix-blend-multiply" />
-              <div className="hidden sm:block text-left">
-                <h1 className="font-black text-xl md:text-2xl tracking-tight text-slate-900 leading-tight">築動預約與服務中心</h1>
-                <p className="text-[10px] md:text-xs text-slate-500 font-bold uppercase tracking-wider">Rebuild Training Lab</p>
-              </div>
+        <div className="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
+          <div className="flex items-center gap-3 cursor-pointer hover:opacity-80 transition-opacity" onClick={() => setView('customer')}>
+            <img src={logoMain} alt="築動 Rebuild Logo" className="h-10 md:h-14 object-contain mix-blend-multiply" />
+            <div className="text-left">
+              <h1 className="font-black text-base sm:text-lg md:text-2xl tracking-tight text-slate-900 leading-tight">
+                <span className="block lg:inline">築動運動防護</span>
+                <span className="block lg:inline">中心</span>
+              </h1>
+              <p className="text-[9px] md:text-xs text-slate-500 font-bold uppercase tracking-wider mt-1">Rebuild Training Lab</p>
             </div>
-            <nav className="flex gap-2 bg-slate-50 p-1.5 rounded-2xl items-center flex-wrap justify-center border border-slate-100 shadow-inner">
-              <button onClick={() => setView('customer')} className={`px-5 py-2.5 rounded-xl text-base font-black transition-all transform shadow-sm ${view === 'customer' ? 'bg-[#1E293B] text-white shadow-md scale-105' : 'bg-white text-slate-700 hover:bg-slate-100 border border-slate-200'}`}>
-                ✨ 我要約課
-              </button>
-              <button onClick={() => setView('progress')} className={`px-5 py-2.5 rounded-xl text-base font-black transition-all transform shadow-sm ${view === 'progress' ? 'bg-[#1E293B] text-white shadow-md scale-105' : 'bg-white text-slate-700 hover:bg-slate-100 border border-slate-200'}`}>
-                📈 進步軌跡
-              </button>
-              <button onClick={() => setView('about')} className={`px-4 py-2.5 rounded-xl text-sm font-bold transition-all transform shadow-sm ${view === 'about' ? 'bg-blue-500 text-white shadow-md scale-105' : 'bg-white text-blue-500 hover:bg-blue-50 border border-blue-100'}`}>
-                📖 認識築動
-              </button>
-              <button onClick={() => setView('shop')} className={`px-4 py-2.5 rounded-xl text-sm font-bold transition-all transform shadow-sm ${view === 'shop' ? 'bg-orange-500 text-white shadow-md scale-105' : 'bg-white text-orange-500 hover:bg-orange-50 border border-orange-100'}`}>
-                🛒 產品選購
-              </button>
-              <button onClick={() => setView('contact')} className={`px-4 py-2.5 rounded-xl text-sm font-bold transition-all transform shadow-sm ${view === 'contact' ? 'bg-emerald-600 text-white shadow-md scale-105' : 'bg-white text-emerald-600 hover:bg-emerald-50 border border-emerald-100'}`}>
-                🤝 合作接洽
-              </button>
-            </nav>
           </div>
-          <nav className="flex gap-2 items-center w-full xl:w-auto justify-center xl:justify-end border-t xl:border-t-0 xl:border-l border-slate-100 pt-3 xl:pt-0 xl:pl-6">
-            <div className="text-xs font-bold text-slate-400 mr-2 hidden sm:block">內部管理區</div>
-            <button onClick={() => setView('teacher')} className={`px-4 py-2 rounded-xl text-sm font-bold transition-all flex items-center gap-1.5 ${view === 'teacher' ? 'bg-slate-800 text-white shadow-md scale-105' : 'bg-white text-slate-600 hover:text-slate-900 border border-slate-200 hover:border-slate-400 shadow-sm'}`}>
-              💪 老師排排課
-            </button>
-            <button onClick={() => setView('admin')} className={`px-4 py-2 rounded-xl text-sm font-bold transition-all flex items-center gap-1.5 ${view === 'admin' ? 'bg-slate-800 text-white shadow-md scale-105' : 'bg-white text-slate-600 hover:text-slate-900 border border-slate-200 hover:border-slate-400 shadow-sm'}`}>
-              👑 JD
-            </button>
+          
+          {/* Desktop Navigation */}
+          <nav className="hidden md:flex gap-2 bg-slate-50 p-1.5 rounded-2xl items-center border border-slate-100 shadow-inner mr-4">
+            <button onClick={() => setView('customer')} className={`px-5 py-2.5 rounded-xl text-sm font-black transition-all transform shadow-sm ${view === 'customer' ? 'bg-[#1E293B] text-white shadow-md scale-105' : 'bg-white text-slate-700 hover:bg-slate-100 border border-slate-200'}`}>✨ 我要約課</button>
+            <button onClick={() => setView('progress')} className={`px-5 py-2.5 rounded-xl text-sm font-black transition-all transform shadow-sm ${view === 'progress' ? 'bg-[#1E293B] text-white shadow-md scale-105' : 'bg-white text-slate-700 hover:bg-slate-100 border border-slate-200'}`}>📈 進步軌跡</button>
+            <button onClick={() => setView('about')} className={`px-4 py-2.5 rounded-xl text-sm font-bold transition-all transform shadow-sm ${view === 'about' ? 'bg-blue-500 text-white shadow-md scale-105' : 'bg-white text-blue-500 hover:bg-blue-50 border border-blue-100'}`}>📖 認識築動</button>
+            <button onClick={() => setView('shop')} className={`px-4 py-2.5 rounded-xl text-sm font-bold transition-all transform shadow-sm ${view === 'shop' ? 'bg-orange-500 text-white shadow-md scale-105' : 'bg-white text-orange-500 hover:bg-orange-50 border border-orange-100'}`}>🛒 產品選購</button>
+            <button onClick={() => setView('contact')} className={`px-4 py-2.5 rounded-xl text-sm font-bold transition-all transform shadow-sm ${view === 'contact' ? 'bg-emerald-600 text-white shadow-md scale-105' : 'bg-white text-emerald-600 hover:bg-emerald-50 border border-emerald-100'}`}>🤝 合作接洽</button>
           </nav>
+
+          {/* Desktop Admin/Teacher Access */}
+          <nav className="hidden md:flex gap-2 items-center border-l border-slate-100 pl-6">
+            <button onClick={() => setView('teacher')} className={`px-4 py-2 rounded-xl text-sm font-bold transition-all flex items-center gap-1.5 ${view === 'teacher' ? 'bg-slate-800 text-white shadow-md scale-105' : 'bg-white text-slate-600 hover:text-slate-900 border border-slate-200 hover:border-slate-400 shadow-sm'}`}>💪 老師排課</button>
+            <button onClick={() => setView('admin')} className={`px-4 py-2 rounded-xl text-sm font-bold transition-all flex items-center gap-1.5 ${view === 'admin' ? 'bg-slate-800 text-white shadow-md scale-105' : 'bg-white text-slate-600 hover:text-slate-900 border border-slate-200 hover:border-slate-400 shadow-sm'}`}>👑 JD</button>
+          </nav>
+
+          {/* Mobile Admin/Teacher Quick Access */}
+          <div className="md:hidden flex items-center gap-1">
+             <button onClick={() => setView('teacher')} className={`p-2 rounded-lg transition-colors ${view === 'teacher' ? 'bg-slate-100 text-slate-800' : 'text-slate-400 hover:bg-slate-50'}`}><BriefcaseIcon size={20} /></button>
+             <button onClick={() => setView('admin')} className={`p-2 rounded-lg transition-colors ${view === 'admin' ? 'bg-slate-100 text-slate-800' : 'text-slate-400 hover:bg-slate-50'}`}><ShieldIcon size={20} /></button>
+          </div>
         </div>
       </header>
 
@@ -1467,18 +1503,18 @@ export default function ZhudongBookingApp() {
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div className="bg-white p-8 rounded-3xl border border-slate-100 shadow-sm hover:shadow-lg transition-all group">
                   <div className="w-16 h-16 bg-blue-50 text-blue-600 rounded-2xl flex items-center justify-center mb-6 group-hover:-translate-y-2 transition-transform shadow-sm"><HeartIcon size={32} /></div>
-                  <h4 className="text-xl font-bold text-slate-800 mb-3">運動按摩</h4>
-                  <p className="text-slate-600 leading-relaxed text-sm">透過專業的手法放鬆深層筋膜，精準解除激痛點。適合長期的肌肉緊繃、運動後的疲勞恢復，以及改善因代償產生的痠痛問題。</p>
+                  <h4 className="text-xl font-bold text-slate-800 mb-3">{aboutContent.service1Title}</h4>
+                  <p className="text-slate-600 leading-relaxed text-sm whitespace-pre-wrap">{aboutContent.service1Desc}</p>
                 </div>
                 <div className="bg-white p-8 rounded-3xl border border-slate-100 shadow-sm hover:shadow-lg transition-all group">
                   <div className="w-16 h-16 bg-orange-50 text-orange-600 rounded-2xl flex items-center justify-center mb-6 group-hover:-translate-y-2 transition-transform shadow-sm"><TargetIcon size={32} /></div>
-                  <h4 className="text-xl font-bold text-slate-800 mb-3">運動訓練</h4>
-                  <p className="text-slate-600 leading-relaxed text-sm">不是盲目舉重，而是建立正確發力與身體張力。強化核心與肌力，提升運動表現並預防受傷，為身體打下最穩固的基礎。</p>
+                  <h4 className="text-xl font-bold text-slate-800 mb-3">{aboutContent.service2Title}</h4>
+                  <p className="text-slate-600 leading-relaxed text-sm whitespace-pre-wrap">{aboutContent.service2Desc}</p>
                 </div>
                 <div className="bg-white p-8 rounded-3xl border border-slate-100 shadow-sm hover:shadow-lg transition-all group">
                   <div className="w-16 h-16 bg-emerald-50 text-emerald-600 rounded-2xl flex items-center justify-center mb-6 group-hover:-translate-y-2 transition-transform shadow-sm"><ActivityIcon size={32} /></div>
-                  <h4 className="text-xl font-bold text-slate-800 mb-3">機能重建</h4>
-                  <p className="text-slate-600 leading-relaxed text-sm">專為受傷後、開刀後或長期姿勢不良者設計。循序漸進地找回關節活動度與神經控制力，安全地重返正常生活與運動場。</p>
+                  <h4 className="text-xl font-bold text-slate-800 mb-3">{aboutContent.service3Title}</h4>
+                  <p className="text-slate-600 leading-relaxed text-sm whitespace-pre-wrap">{aboutContent.service3Desc}</p>
                 </div>
               </div>
             </div>
@@ -1505,6 +1541,78 @@ export default function ZhudongBookingApp() {
                 </div>
               </div>
             )}
+
+            {/* --- 新增：聯絡資訊與社群連結 --- */}
+            <div className="space-y-6 pt-10 mt-10">
+              <div className="text-center mb-8">
+                <span className="bg-indigo-100 text-indigo-800 px-4 py-1.5 rounded-full text-sm font-black tracking-widest">CONTACT & LOCATION</span>
+                <h3 className="text-2xl font-bold text-slate-800 mt-4">聯絡我們與交通資訊</h3>
+              </div>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8 bg-white p-6 md:p-8 rounded-3xl border border-slate-100 shadow-sm">
+                {/* 左側：社群與聯絡方式 */}
+                <div className="space-y-6">
+                   <h4 className="text-xl font-bold text-slate-800 mb-4 flex items-center gap-2"><MessageSquareIcon className="text-indigo-600"/> 關注與聯繫</h4>
+                   <p className="text-slate-600 text-sm leading-relaxed">有任何課程問題或想了解更多防護知識，歡迎透過以下方式聯繫我們，或追蹤我們的社群平台獲取最新資訊！</p>
+                   
+                   <div className="flex flex-col gap-4 mt-6">
+                     <a href={aboutContent.lineLink} target="_blank" rel="noreferrer" className="flex items-center gap-4 p-3 rounded-2xl border border-slate-100 hover:border-indigo-300 hover:bg-indigo-50 transition-colors group">
+                        <div className="w-12 h-12 bg-[#06C755] text-white rounded-full flex items-center justify-center shrink-0 shadow-sm group-hover:scale-105 transition-transform">
+                          <MessageCircleIcon size={24} />
+                        </div>
+                        <div>
+                          <div className="font-bold text-slate-800">LINE 官方帳號</div>
+                          <div className="text-xs text-slate-500">{aboutContent.lineId}</div>
+                        </div>
+                     </a>
+                     <a href={aboutContent.fbLink} target="_blank" rel="noreferrer" className="flex items-center gap-4 p-3 rounded-2xl border border-slate-100 hover:border-blue-300 hover:bg-blue-50 transition-colors group">
+                        <div className="w-12 h-12 bg-[#1877F2] text-white rounded-full flex items-center justify-center shrink-0 shadow-sm group-hover:scale-105 transition-transform">
+                          <FacebookIcon size={24} />
+                        </div>
+                        <div>
+                          <div className="font-bold text-slate-800">Facebook 粉絲專頁</div>
+                          <div className="text-xs text-slate-500">{aboutContent.fbName}</div>
+                        </div>
+                     </a>
+                     <a href={aboutContent.igLink} target="_blank" rel="noreferrer" className="flex items-center gap-4 p-3 rounded-2xl border border-slate-100 hover:border-pink-300 hover:bg-pink-50 transition-colors group">
+                        <div className="w-12 h-12 bg-gradient-to-tr from-[#F58529] via-[#DD2A7B] to-[#8134AF] text-white rounded-full flex items-center justify-center shrink-0 shadow-sm group-hover:scale-105 transition-transform">
+                          <InstagramIcon size={24} />
+                        </div>
+                        <div>
+                          <div className="font-bold text-slate-800">Instagram</div>
+                          <div className="text-xs text-slate-500">{aboutContent.igName}</div>
+                        </div>
+                     </a>
+                   </div>
+                </div>
+
+                {/* 右側：地圖與地址 */}
+                <div className="space-y-6">
+                   <h4 className="text-xl font-bold text-slate-800 mb-4 flex items-center gap-2"><MapPinIcon className="text-rose-500"/> 交通位置</h4>
+                   <div className="w-full h-64 bg-slate-100 rounded-2xl overflow-hidden border border-slate-200">
+                      <iframe 
+                        src={aboutContent.mapUrl} 
+                        width="100%" 
+                        height="100%" 
+                        style={{ border: 0 }} 
+                        allowFullScreen="" 
+                        loading="lazy" 
+                        referrerPolicy="no-referrer-when-downgrade">
+                      </iframe>
+                   </div>
+                   <div className="bg-slate-50 p-4 rounded-xl border border-slate-100 space-y-2">
+                     <div className="flex items-start gap-2 text-sm">
+                       <MapPinIcon size={16} className="text-slate-400 mt-0.5 shrink-0" />
+                       <span className="text-slate-700 font-bold">{aboutContent.address}</span>
+                     </div>
+                     <div className="flex items-start gap-2 text-sm">
+                       <PhoneIcon size={16} className="text-slate-400 mt-0.5 shrink-0" />
+                       <span className="text-slate-700 font-bold">{aboutContent.phone}</span>
+                     </div>
+                   </div>
+                </div>
+              </div>
+            </div>
           </div>
         )}
 
@@ -1621,8 +1729,17 @@ export default function ZhudongBookingApp() {
                                   <button onClick={() => setEditModal({ isOpen: true, type: 'appointment', data: ap })} className="text-slate-400 hover:text-indigo-600 ml-2"><EditIcon size={16} /></button>
                                 </div>
                                 <div className="text-slate-600 flex items-center gap-2 font-medium"><UserIcon /> 學生姓名：{ap.studentName}</div>
+                                <div className="text-slate-500 flex items-center gap-2 text-sm mt-1">📞 電話：{ap.phone || '未提供'}</div>
+                                
+                                {(ap.referral || ap.concern || ap.hasMedical) && (
+                                   <div className="mt-3 bg-slate-50 p-3 rounded-xl border border-slate-100 space-y-1.5 text-sm">
+                                     {ap.referral && <div className="flex items-start gap-2"><span className="text-slate-400 font-bold whitespace-nowrap">介紹人：</span><span className="text-slate-700 font-medium">{ap.referral}</span></div>}
+                                     {ap.concern && <div className="flex items-start gap-2"><span className="text-slate-400 font-bold whitespace-nowrap">困擾問題：</span><span className="text-slate-700 font-medium">{ap.concern}</span></div>}
+                                     {ap.hasMedical && <div className="flex items-start gap-2"><span className="text-rose-400 font-bold whitespace-nowrap">⚠️ 特殊狀況：</span><span className="text-rose-600 font-bold">{ap.medicalDetails || '有受傷/懷孕等狀況'}</span></div>}
+                                   </div>
+                                )}
                               </div>
-                              <div className="flex items-center gap-3">
+                              <div className="flex flex-wrap items-center gap-2 md:gap-3">
                                 <button onClick={() => setAssessmentModal({ isOpen: true, data: ap })} className="px-4 py-2 rounded-xl text-sm font-bold transition-colors shadow-sm bg-indigo-50 text-indigo-700 hover:bg-indigo-100">📝 檢測數據</button>
                                 <button onClick={() => handleToggleAttendance(ap.id)} className={`px-4 py-2 rounded-xl text-sm font-bold transition-colors shadow-sm ${ap.attended ? 'bg-emerald-500 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>
                                   {ap.attended ? '已報到 ✓' : '點擊報到'}
@@ -1641,292 +1758,338 @@ export default function ZhudongBookingApp() {
 
         {/* ================= CUSTOMER VIEW ================= */}
         {view === 'customer' && (
-          <div className="space-y-6 animate-fade-in">
-            <div className="mb-8 flex flex-col md:flex-row md:items-end justify-between gap-4">
+          <div className="space-y-4 md:space-y-6 animate-fade-in max-w-3xl mx-auto pb-10">
+            <div className="mb-4 md:mb-8 flex flex-col md:flex-row md:items-end justify-between gap-4">
               <div>
-                <h2 className="text-3xl font-extrabold text-[#1E293B] tracking-tight">預約課程</h2>
-                <p className="text-slate-500 mt-2">尋找您的專屬防護師，踏上「讓健康成為日常」的旅程。</p>
+                <h2 className="text-2xl md:text-3xl font-extrabold text-[#1E293B] tracking-tight">預約課程</h2>
+                <p className="text-sm text-slate-500 mt-1">尋找您的專屬防護師，踏上「讓健康成為日常」的旅程。</p>
               </div>
               <button 
                 onClick={() => { setSearchModalOpen(true); setMyAppointments(null); setSearchPhone(''); }}
-                className="bg-white text-indigo-600 hover:bg-indigo-50 border border-indigo-200 px-5 py-2.5 rounded-xl font-bold transition-all shadow-sm flex items-center justify-center gap-2 active:scale-95 shrink-0"
+                className="bg-white text-indigo-600 hover:bg-indigo-50 border border-indigo-200 px-5 py-3 md:py-2.5 rounded-xl font-bold transition-all shadow-sm flex items-center justify-center gap-2 active:scale-95 shrink-0"
               >
                 <SearchIcon size={18} /> 查詢 / 取消 我的預約
               </button>
             </div>
 
-            {/* 新增：切換 約課模式 (導引配對 vs 直接指定) */}
-            <div className="flex bg-slate-200/50 p-1.5 rounded-2xl mb-4 w-full sm:w-fit shadow-inner">
-              <button 
-                onClick={() => { setBookingFlowType('guided'); setSelectedTeacher('all'); setBookingIntent(null); setSelectedTags([]); }}
-                className={`flex-1 sm:flex-none px-6 py-3 rounded-xl text-sm font-bold transition-all ${bookingFlowType === 'guided' ? 'bg-white text-indigo-700 shadow-sm' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-200/50'}`}
-              >
-                🔍 依需求找教練 (新客推薦)
-              </button>
-              <button 
-                onClick={() => { setBookingFlowType('direct'); setSelectedTeacher('all'); setBookingIntent(null); setSelectedTags([]); }}
-                className={`flex-1 sm:flex-none px-6 py-3 rounded-xl text-sm font-bold transition-all ${bookingFlowType === 'direct' ? 'bg-white text-[#c1955b] shadow-sm' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-200/50'}`}
-              >
-                ⚡ 直接指定教練 (老客戶)
-              </button>
+            {/* 步驟進度條 */}
+            <div ref={stepContainerRef} className="flex items-center justify-between mb-6 bg-white p-4 md:p-6 rounded-3xl shadow-sm border border-slate-100 overflow-x-auto scrollbar-hide scroll-mt-20 md:scroll-mt-24">
+               {['選擇教練', '日期時間', '填寫資料', '確認預約'].map((stepName, idx) => {
+                 const stepNum = idx + 1;
+                 const isActive = bookingStep === stepNum;
+                 const isPassed = bookingStep > stepNum;
+                 return (
+                   <div key={stepName} className="flex flex-col items-center gap-1.5 flex-1 min-w-[72px] relative group" onClick={() => { if(isPassed) { setBookingStep(stepNum); scrollToStep(); } }}>
+                     <div className={`w-8 h-8 md:w-10 md:h-10 rounded-full flex items-center justify-center text-sm md:text-base font-bold z-10 transition-all ${isActive ? 'bg-[#1E293B] text-white shadow-md scale-110' : isPassed ? 'bg-indigo-100 text-indigo-700 cursor-pointer hover:bg-indigo-200' : 'bg-slate-100 text-slate-400'}`}>
+                       {isPassed ? <CheckIcon size={18}/> : stepNum}
+                     </div>
+                     <div className={`text-[10px] md:text-xs font-bold transition-colors ${isActive ? 'text-[#1E293B]' : isPassed ? 'text-indigo-700' : 'text-slate-400'}`}>{stepName}</div>
+                     {stepNum < 4 && <div className={`absolute top-4 md:top-5 left-[60%] w-[80%] h-[3px] -z-0 rounded-full transition-colors ${isPassed ? 'bg-indigo-200' : 'bg-slate-100'}`}></div>}
+                   </div>
+                 )
+               })}
             </div>
 
-            {/* 兩步篩選法 UI (僅在 Guided 模式下顯示) */}
-            {bookingFlowType === 'guided' && (
-              <div className="bg-white rounded-3xl p-6 shadow-sm border border-slate-100 mb-8">
-                <h3 className="text-lg font-black text-slate-800 mb-4 flex items-center gap-2"><TargetIcon className="text-indigo-600" /> 第一步：您今天想解決什麼需求？</h3>
-                <div className="flex flex-col md:flex-row gap-4 mb-6">
-                  <button 
-                    onClick={() => { setBookingIntent('relax'); setSelectedTags([]); setSelectedTeacher('all'); }}
-                    className={`flex-1 py-5 rounded-2xl font-black text-lg transition-all border-2 flex items-center justify-center gap-3 ${bookingIntent === 'relax' ? 'border-[#1E293B] bg-slate-50 text-[#1E293B] shadow-md' : 'border-slate-100 bg-white text-slate-400 hover:border-slate-300'}`}
-                  >
-                    <span className="text-2xl">💆‍♂️</span> 我要解痛放鬆
-                  </button>
-                  <button 
-                    onClick={() => { setBookingIntent('train'); setSelectedTags([]); setSelectedTeacher('all'); }}
-                    className={`flex-1 py-5 rounded-2xl font-black text-lg transition-all border-2 flex items-center justify-center gap-3 ${bookingIntent === 'train' ? 'border-[#c1955b] bg-amber-50 text-[#9b7342] shadow-md' : 'border-slate-100 bg-white text-slate-400 hover:border-slate-300'}`}
-                  >
-                    <span className="text-2xl">🏋️‍♀️</span> 我要強化身體
-                  </button>
+            {/* Step 1: 選擇教練 (原 Step 2) */}
+            {bookingStep === 1 && (
+              <div className="space-y-6 animate-fade-in">
+                <div className="bg-white rounded-3xl p-5 md:p-8 shadow-sm border border-slate-100">
+                  <h3 className="text-xl font-black text-slate-800 mb-6 flex items-center gap-2"><BriefcaseIcon className="text-[#1E293B]"/> 第一步：選擇預約方式</h3>
+                  <div className="flex flex-col sm:flex-row bg-slate-100/80 p-1.5 rounded-2xl w-full shadow-inner gap-1.5">
+                    <button 
+                      onClick={() => { setBookingFlowType('guided'); setSelectedTeacher('all'); setBookingIntent(null); setSelectedTags([]); }}
+                      className={`flex-1 px-4 py-3.5 rounded-xl text-sm md:text-base font-bold transition-all ${bookingFlowType === 'guided' ? 'bg-white text-indigo-700 shadow-sm ring-1 ring-black/5' : 'text-slate-500 hover:text-slate-700'}`}
+                    >
+                      🔍 依需求找教練 (初次體驗)
+                    </button>
+                    <button 
+                      onClick={() => { setBookingFlowType('direct'); setSelectedTeacher('all'); setBookingIntent(null); setSelectedTags([]); }}
+                      className={`flex-1 px-4 py-3.5 rounded-xl text-sm md:text-base font-bold transition-all ${bookingFlowType === 'direct' ? 'bg-white text-[#c1955b] shadow-sm ring-1 ring-black/5' : 'text-slate-500 hover:text-slate-700'}`}
+                    >
+                      ⚡ 直接指定教練 (老客戶)
+                    </button>
+                  </div>
                 </div>
 
-                {bookingIntent && (
-                  <div className="bg-[#FAF9F6] p-5 rounded-2xl border border-slate-100 animate-fade-in space-y-5">
-                    <h4 className="text-sm font-bold text-slate-500">第二步：選擇您的偏好與狀態 (可複選)</h4>
+                {bookingFlowType === 'guided' && (
+                  <div className="bg-white rounded-3xl p-5 md:p-8 shadow-sm border border-slate-100 animate-fade-in">
+                    <h3 className="text-xl font-black text-slate-800 mb-6">您今天想解決什麼需求？</h3>
+                    <div className="flex flex-col sm:flex-row gap-3 md:gap-4 mb-5">
+                      <button 
+                        onClick={() => { setBookingIntent('relax'); setSelectedTags([]); setSelectedTeacher('all'); }}
+                        className={`flex-1 py-4 md:py-5 rounded-2xl font-black text-base md:text-lg transition-all border-2 flex items-center justify-center gap-3 ${bookingIntent === 'relax' ? 'border-[#1E293B] bg-slate-50 text-[#1E293B] shadow-md' : 'border-slate-100 bg-white text-slate-400 hover:border-slate-300'}`}
+                      >
+                        <span className="text-2xl">💆‍♂️</span> 我要解痛放鬆
+                      </button>
+                      <button 
+                        onClick={() => { setBookingIntent('train'); setSelectedTags([]); setSelectedTeacher('all'); }}
+                        className={`flex-1 py-4 md:py-5 rounded-2xl font-black text-base md:text-lg transition-all border-2 flex items-center justify-center gap-3 ${bookingIntent === 'train' ? 'border-[#c1955b] bg-amber-50 text-[#9b7342] shadow-md' : 'border-slate-100 bg-white text-slate-400 hover:border-slate-300'}`}
+                      >
+                        <span className="text-2xl">🏋️‍♀️</span> 我要強化身體
+                      </button>
+                    </div>
+
+                    {bookingIntent && (
+                      <div className="bg-[#FAF9F6] p-4 md:p-6 rounded-2xl border border-slate-100 animate-fade-in space-y-5 mt-6">
+                        <h4 className="text-sm font-bold text-slate-500 border-b border-slate-200 pb-2">進一步選擇您的偏好與狀態 (可複選)</h4>
+                        {[...(bookingIntent === 'relax' ? ['bodyParts', 'intensity'] : ['lifestyles', 'trainings'])].map(catKey => {
+                           const cat = tagCategories[catKey];
+                           return (
+                             <div key={catKey}>
+                                <div className="text-xs md:text-sm font-black text-slate-700 mb-3">{cat.label}</div>
+                                <div className="flex flex-wrap gap-2 md:gap-3">
+                                   {cat.options.map(opt => {
+                                      const isSelected = selectedTags.includes(opt);
+                                      return (
+                                        <button
+                                          key={opt}
+                                          onClick={() => setSelectedTags(prev => prev.includes(opt) ? prev.filter(t => t !== opt) : [...prev, opt])}
+                                          className={`px-4 py-2 md:py-2.5 rounded-full text-sm font-bold transition-all border ${
+                                            isSelected ? (bookingIntent === 'relax' ? 'bg-[#1E293B] text-white border-[#1E293B] shadow-sm' : 'bg-[#c1955b] text-white border-[#c1955b] shadow-sm') 
+                                            : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
+                                          }`}
+                                        >
+                                          {opt}
+                                        </button>
+                                      );
+                                   })}
+                                </div>
+                             </div>
+                           );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {(bookingIntent || bookingFlowType === 'direct') && (
+                  <div className="bg-white rounded-3xl p-5 md:p-8 shadow-sm border border-slate-100 animate-fade-in">
+                    <h3 className="text-xl font-black text-slate-800 mb-6 flex items-center justify-between">
+                      <span>{bookingFlowType === 'direct' ? '選擇您的專屬防護師' : '為您推薦的防護師'}</span>
+                      <span className="text-xs font-bold text-slate-500 bg-slate-100 px-3 py-1.5 rounded-full">符合: {displayTeachers.length} 位</span>
+                    </h3>
                     
-                    {/* 根據 Intent 顯示不同分類 */}
-                    {[...(bookingIntent === 'relax' ? ['bodyParts', 'intensity'] : ['lifestyles', 'trainings'])].map(catKey => {
-                       const cat = tagCategories[catKey];
-                       return (
-                         <div key={catKey}>
-                            <div className="text-xs font-black text-slate-700 mb-2">{cat.label}</div>
-                            <div className="flex flex-wrap gap-2">
-                               {cat.options.map(opt => {
-                                  const isSelected = selectedTags.includes(opt);
-                                  return (
-                                    <button
-                                      key={opt}
-                                      onClick={() => setSelectedTags(prev => prev.includes(opt) ? prev.filter(t => t !== opt) : [...prev, opt])}
-                                      className={`px-3 py-1.5 rounded-full text-xs font-bold transition-all border ${
-                                        isSelected ? (bookingIntent === 'relax' ? 'bg-[#1E293B] text-white border-[#1E293B]' : 'bg-[#c1955b] text-white border-[#c1955b]') 
-                                        : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50 hover:border-slate-300'
-                                      }`}
-                                    >
-                                      {opt}
-                                    </button>
-                                  );
-                               })}
-                            </div>
-                         </div>
-                       );
-                    })}
-                  </div>
-                )}
-              </div>
-            )}
+                    {displayTeachers.length === 0 ? (
+                      <div className="text-center py-12 bg-slate-50 rounded-2xl border border-dashed border-slate-200 text-slate-400 font-medium text-sm">
+                        目前沒有符合所有所選標籤的教練 🥺<br/>請嘗試減少一些篩選條件！
+                      </div>
+                    ) : (
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4">
+                        {displayTeachers.map(name => {
+                          const profile = teacherProfiles[name];
+                          const hashtags = Object.values(profile.tags || {}).flat();
 
-            {/* 教練展示列表 */}
-            {(bookingIntent || bookingFlowType === 'direct') && (
-              <div className="mb-6 animate-fade-in space-y-4">
-                <h3 className="text-lg font-black text-slate-800 flex items-center justify-between">
-                  <span>{bookingFlowType === 'direct' ? '選擇您的專屬防護師' : '推薦的防護師 / 教練'}</span>
-                  <span className="text-sm font-bold text-slate-500 bg-slate-100 px-3 py-1 rounded-full">符合條件：{displayTeachers.length} 位</span>
-                </h3>
-                
-                {displayTeachers.length === 0 ? (
-                  <div className="text-center py-12 bg-white rounded-3xl border border-dashed border-slate-200 text-slate-400 font-medium">
-                    目前沒有符合所有所選標籤的教練 🥺<br/>請嘗試減少一些篩選條件！
-                  </div>
-                ) : (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {displayTeachers.map(name => {
-                      const profile = teacherProfiles[name];
-                      const isSelected = selectedTeacher === name;
-                      // 取得所有 Hashtags 扁平陣列
-                      const hashtags = Object.values(profile.tags || {}).flat();
-
-                      return (
-                        <div 
-                          key={name} 
-                          onClick={() => {
-                            setSelectedTeacher(name);
-                            setTimeout(() => window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' }), 150);
-                          }}
-                          className={`bg-white rounded-3xl p-5 border-2 flex flex-col gap-3 transition-all cursor-pointer group ${isSelected ? (bookingFlowType === 'direct' ? 'border-[#c1955b] shadow-md ring-4 ring-amber-50' : (bookingIntent === 'relax' ? 'border-[#1E293B] shadow-md ring-4 ring-slate-100' : 'border-[#c1955b] shadow-md ring-4 ring-amber-50')) : 'border-slate-100 hover:shadow-md hover:border-slate-300'}`}
-                        >
-                          <div className="flex gap-4 items-start">
-                            <div className="w-16 h-16 bg-slate-100 text-slate-400 rounded-full flex items-center justify-center shrink-0 overflow-hidden shadow-sm border-2 border-white mt-1">
-                              {profile.photo ? <img src={profile.photo} alt={name} className="w-full h-full object-cover" /> : <UserIcon size={24} />}
-                            </div>
-                            <div className="flex-1">
-                              <div className="flex justify-between items-center mb-2">
-                                <h3 className="font-bold text-xl text-slate-800">{name}</h3>
-                                {isSelected && <span className={`text-xs font-black px-2 py-1 rounded-full shadow-sm ${bookingFlowType === 'direct' ? 'bg-[#c1955b] text-white' : (bookingIntent === 'relax' ? 'bg-[#1E293B] text-white' : 'bg-[#c1955b] text-white')}`}>已選擇 ✓</span>}
+                          return (
+                            <div 
+                              key={name} 
+                              onClick={() => {
+                                setSelectedTeacher(name);
+                                setBookingStep(2);
+                                scrollToStep();
+                              }}
+                              className="bg-white rounded-2xl p-3 md:p-4 border border-slate-100 flex gap-3 items-center transition-all cursor-pointer group hover:shadow-md hover:border-[#c1955b] active:scale-[0.98]"
+                            >
+                              <div className="w-14 h-14 bg-slate-100 text-slate-400 rounded-full flex items-center justify-center shrink-0 overflow-hidden shadow-sm border border-slate-200">
+                                {profile.photo ? <img src={profile.photo} alt={name} className="w-full h-full object-cover" /> : <UserIcon size={20} />}
                               </div>
-                              {profile.quote && <div className="text-sm font-bold text-[#c1955b] mb-2">「{profile.quote}」</div>}
-                              <p className="text-sm text-slate-600 font-medium leading-relaxed mb-3 whitespace-pre-wrap">{profile.description}</p>
+                              <div className="flex-1 min-w-0">
+                                <div className="flex justify-between items-center mb-0.5">
+                                   <h3 className="font-bold text-base text-slate-800 truncate">{name}</h3>
+                                   <span className="text-[10px] font-bold text-white bg-[#1E293B] px-2 py-1 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity shrink-0">選擇</span>
+                                </div>
+                                <p className="text-[11px] text-slate-500 font-medium truncate mb-1.5" title={profile.description}>{profile.description || getPrimarySpecialty(profile)}</p>
+                                <div className="flex flex-wrap gap-1 h-[20px] overflow-hidden">
+                                  {hashtags.slice(0, 3).map(tag => (
+                                    <span key={tag} className="text-[9px] px-1.5 py-0.5 rounded bg-slate-50 text-slate-500 font-bold whitespace-nowrap group-hover:bg-amber-50 group-hover:text-[#c1955b] transition-colors border border-slate-100">
+                                      #{tag}
+                                    </span>
+                                  ))}
+                                </div>
+                              </div>
                             </div>
-                          </div>
-                          {/* 顯示 Hashtags 與點擊提示 */}
-                          <div className="flex items-center justify-between pt-3 border-t border-slate-100 mt-auto">
-                            <div className="flex flex-wrap gap-1.5">
-                              {hashtags.map(tag => (
-                                <span key={tag} className={`text-[10px] px-2 py-1 rounded font-bold ${selectedTags.includes(tag) ? (bookingIntent === 'relax' ? 'bg-[#1E293B] text-white' : 'bg-[#c1955b] text-white') : 'bg-slate-100 text-slate-500'}`}>
-                                  #{tag}
-                                </span>
-                              ))}
-                            </div>
-                            {!isSelected && (
-                              <span className="text-xs font-bold text-slate-400 group-hover:text-indigo-600 transition-colors ml-2 shrink-0">
-                                點擊選擇 ➔
-                              </span>
-                            )}
-                          </div>
-                        </div>
-                      );
-                    })}
+                          );
+                        })}
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
             )}
 
-            {selectedTeacher !== 'all' && (
-              <div className="animate-fade-in mt-10">
-                <div className="flex items-center gap-2 mb-4">
-                  <h3 className="text-xl font-bold text-slate-800">
-                    預約 {selectedTeacher} 的課程
-                  </h3>
-                </div>
-                {renderSharedCalendar('customer')}
+            {/* Step 2: 選擇日期與時間 (原 Step 3) */}
+            {bookingStep === 2 && (
+               <div className="space-y-6 animate-fade-in">
+                  <div className="bg-white rounded-3xl p-5 md:p-8 shadow-sm border border-slate-100">
+                     <h3 className="text-xl font-black text-slate-800 mb-6 flex items-center gap-2"><ViewCalendarIcon className="text-[#1E293B]"/> 第二步：選擇日期與時段</h3>
+                     
+                     <div className="mb-8">
+                        <h4 className="text-sm font-bold text-slate-600 mb-4 bg-slate-50 p-2 rounded-lg inline-block">1. 選擇上課日期</h4>
+                        {renderSharedCalendar('customer')}
+                     </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
-                  <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 h-fit">
-                      <h3 className="text-lg font-bold text-slate-800 mb-4">自 {selectedDate} 起 7 天內開放時段</h3>
-                      {(() => {
-                         const next7Days = [];
-                         const startD = new Date(selectedDate);
-                         for(let i=0; i<7; i++){
-                            const d = new Date(startD);
-                            d.setDate(startD.getDate() + i);
-                            next7Days.push(`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`);
-                         }
-                         
-                         const hasAny = next7Days.some(dateStr => availabilities.some(a => a.teacherName === selectedTeacher && a.date === dateStr));
-
-                         if (!hasAny) return <div className="text-slate-400 text-sm text-center py-8 bg-slate-50 rounded-xl border border-dashed">近七天教練暫未開放預約時間 🥺</div>;
-
-                         return (
-                           <div className="space-y-4 max-h-[380px] overflow-y-auto pr-2 scrollbar-hide">
-                             {next7Days.map(dateStr => {
-                                const dayAvails = availabilities.filter(a => a.teacherName === selectedTeacher && a.date === dateStr).sort((a,b) => timeToMins(a.startTime) - timeToMins(b.startTime));
-                                if (dayAvails.length === 0) return null;
-                                return (
-                                   <div key={dateStr} className="space-y-2">
-                                      <div className="text-xs font-bold text-indigo-700 bg-indigo-50 px-2.5 py-1 rounded-md inline-block">📅 {dateStr}</div>
-                                      <div className="space-y-2">
-                                         {dayAvails.map(a => (
-                                            <button 
-                                              key={a.id} 
-                                              type="button" 
-                                              onClick={() => { setSelectedDate(dateStr); setBookingStartTime(a.startTime); }} 
-                                              className="w-full text-left bg-slate-50 hover:bg-indigo-50 text-slate-700 hover:text-indigo-700 p-3 rounded-xl font-bold border border-slate-100 hover:border-indigo-200 transition-colors flex items-center justify-between gap-3 group shadow-sm"
-                                            >
-                                               <span className="flex items-center gap-2"><ClockIcon className="text-slate-400 group-hover:text-indigo-400 transition-colors" size={16} /> {a.startTime} ~ {a.endTime}</span>
-                                               <span className="text-[10px] text-indigo-600 opacity-0 group-hover:opacity-100 transition-opacity bg-indigo-100 px-2 py-0.5 rounded">帶入時間 ➔</span>
-                                            </button>
-                                         ))}
-                                      </div>
-                                   </div>
-                                );
-                             })}
-                           </div>
-                         );
-                      })()}
-                  </div>
-
-                  <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 h-fit">
-                      <h3 className="text-lg font-bold text-slate-800 mb-4">填寫您的預約資訊</h3>
-                      <form onSubmit={handleBookAppointment} className="space-y-5">
-                        <input type="hidden" name="targetTeacher" value={selectedTeacher} />
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                          <div className="space-y-1.5">
-                            <label className="text-sm font-bold text-slate-600 flex items-center gap-1">您的姓名 <span className="text-[10px] text-rose-500">(必填)</span></label>
-                            <input type="text" name="customerName" placeholder="請輸入真實姓名" className="w-full px-4 py-2.5 rounded-lg border border-slate-200 outline-none bg-slate-50 focus:bg-white" required />
-                          </div>
-                          <div className="space-y-1.5">
-                            <label className="text-sm font-bold text-slate-600 flex items-center gap-1">聯絡電話 <span className="text-[10px] text-rose-500">(必填)</span></label>
-                            <input type="tel" name="phone" placeholder="例如：0912345678" className="w-full px-4 py-2.5 rounded-lg border border-slate-200 outline-none bg-slate-50 focus:bg-white" required />
-                          </div>
-                        </div>
-
-                        <div className="bg-slate-50 p-4 rounded-xl border border-slate-100 space-y-4">
-                          <h4 className="text-sm font-bold text-slate-700 flex items-center gap-2">✨ 讓我們更了解您 <span className="text-[10px] text-slate-400 font-normal">(選填)</span></h4>
-                          <div>
-                            <label className="text-xs font-bold text-slate-600 mb-1 block">介紹人 (若有)</label>
-                            <input type="text" name="referral" placeholder="請輸入介紹人姓名" className="w-full px-3 py-2 rounded-lg border border-slate-200 outline-none text-sm bg-white" />
-                          </div>
-                          <div>
-                            <label className="text-xs font-bold text-slate-600 mb-1 block">目前最困擾的問題</label>
-                            <textarea name="concern" placeholder="想改善駝背、長期腰痛、想減脂..." className="w-full px-3 py-2 rounded-lg border border-slate-200 outline-none text-sm resize-none bg-white" rows="2" />
-                          </div>
-                          <div className="space-y-2">
-                            <label className="flex items-center gap-2 text-sm font-bold text-slate-700 cursor-pointer w-fit">
-                                <input type="checkbox" name="hasMedical" checked={hasMedicalCondition} onChange={e => setHasMedicalCondition(e.target.checked)} className="w-4 h-4 text-indigo-600 rounded cursor-pointer" />
-                                近期是否有懷孕、開刀、或受傷情況？
-                            </label>
-                            {hasMedicalCondition && (
-                                <input type="text" name="medicalDetails" placeholder="請簡述您的狀況，讓我們為您安排最安全的課程..." className="w-full px-3 py-2 rounded-lg border border-amber-200 outline-none text-sm bg-amber-50" />
-                            )}
-                          </div>
-                        </div>
-
-                        <div className="space-y-2">
-                            <label className="text-sm font-bold text-slate-600 flex items-center gap-1"><ClockIcon size={16} className="text-indigo-500" /> 想預約的開始時間 <span className="text-[10px] text-rose-500">(必選)</span></label>
-                            <input type="hidden" name="startTime" value={bookingStartTime} />
-                            <div className="grid grid-cols-4 sm:grid-cols-5 gap-2 max-h-48 overflow-y-auto p-1 -mx-1 scrollbar-hide">
-                              {availableTimeSlots.map(time => {
-                                const isAvailable = checkTimeSlotAvailable(time, bookingDuration, selectedDate, selectedTeacher);
-                                return (
-                                  <button
-                                    key={time} type="button" disabled={!isAvailable} onClick={() => setBookingStartTime(time)}
-                                    className={`py-2 rounded-lg text-sm font-bold transition-all border ${!isAvailable ? 'bg-slate-50 text-slate-300 border-slate-100 cursor-not-allowed opacity-60' : bookingStartTime === time ? 'bg-[#1E293B] text-white border-[#1E293B] shadow-sm' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-100'}`}
-                                  >
-                                    {time}
-                                  </button>
-                                );
-                              })}
-                            </div>
-                          </div>
-                          
-                          <div className="space-y-2 pt-2">
-                            <label className="text-sm font-bold text-slate-600 flex items-center gap-1">選擇課程長度 <span className="text-[10px] text-rose-500">(必選)</span></label>
-                            <input type="hidden" name="duration" value={bookingDuration} />
-                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                              <button type="button" onClick={() => setBookingDuration(60)} className={`p-4 rounded-xl border-2 text-left transition-all duration-300 flex flex-col justify-center ${bookingDuration === 60 ? 'border-slate-800 bg-slate-50 shadow-sm scale-[1.02]' : 'border-slate-100 bg-white hover:bg-slate-50'}`}>
-                                <div className={`flex items-center gap-2 font-bold text-lg ${bookingDuration === 60 ? 'text-slate-800' : 'text-slate-600'}`}>60 分鐘</div>
-                                <div className={`text-xs mt-1 font-medium ${bookingDuration === 60 ? 'text-slate-600' : 'text-slate-400'}`}>局部處理</div>
-                              </button>
-                              <button type="button" onClick={() => setBookingDuration(90)} className={`p-4 rounded-xl border-2 text-left transition-all duration-300 relative overflow-hidden flex flex-col justify-center ${bookingDuration === 90 ? 'border-[#c1955b] bg-amber-50 shadow-md scale-[1.05] z-10' : 'border-slate-100 bg-white hover:bg-slate-50'}`}>
-                                <div className="absolute top-0 right-0 bg-gradient-to-r from-amber-400 to-[#c1955b] text-white text-[10px] font-bold px-2 py-1 rounded-bl-lg shadow-sm">標準推薦</div>
-                                <div className={`flex items-center gap-2 font-bold text-lg mt-1 ${bookingDuration === 90 ? 'text-[#9b7342]' : 'text-slate-600'}`}>90 分鐘</div>
-                                <div className={`text-xs mt-1 font-medium ${bookingDuration === 90 ? 'text-[#b08853]' : 'text-slate-400'}`}>完整課程體驗</div>
-                              </button>
-                              <button type="button" onClick={() => setBookingDuration(120)} className={`p-4 rounded-xl border-2 text-left transition-all duration-300 flex flex-col justify-center ${bookingDuration === 120 ? 'border-slate-800 bg-slate-50 shadow-sm scale-[1.02]' : 'border-slate-100 bg-white hover:bg-slate-50'}`}>
-                                <div className={`flex items-center gap-2 font-bold text-lg ${bookingDuration === 120 ? 'text-slate-800' : 'text-slate-600'}`}>120 分鐘</div>
-                                <div className={`text-xs mt-1 font-medium ${bookingDuration === 120 ? 'text-slate-600' : 'text-slate-400'}`}>全身深度調整</div>
-                              </button>
-                            </div>
-                          </div>
-
-                          <button type="submit" className="w-full bg-[#1E293B] hover:bg-black text-white py-4 rounded-xl font-bold transition-all shadow-md hover:shadow-lg active:scale-[0.98] mt-4 text-lg">
-                            ✨ 確認預約
+                     <div className="mb-8">
+                        <h4 className="text-sm font-bold text-slate-600 mb-4 bg-slate-50 p-2 rounded-lg inline-block">2. 選擇課程長度</h4>
+                        <div className="grid grid-cols-3 gap-3 md:gap-4">
+                          <button type="button" onClick={() => setBookingDuration(60)} className={`p-3 md:p-4 rounded-2xl border-2 text-center transition-all flex flex-col justify-center items-center ${bookingDuration === 60 ? 'border-slate-800 bg-slate-50 shadow-md scale-105' : 'border-slate-100 bg-white hover:bg-slate-50'}`}>
+                            <div className={`font-black text-xl md:text-2xl ${bookingDuration === 60 ? 'text-slate-800' : 'text-slate-600'}`}>60<span className="text-xs md:text-sm font-bold">m</span></div>
+                            <div className={`text-xs mt-1 font-bold ${bookingDuration === 60 ? 'text-slate-600' : 'text-slate-400'}`}>局部處理</div>
                           </button>
-                      </form>
+                          <button type="button" onClick={() => setBookingDuration(90)} className={`p-3 md:p-4 rounded-2xl border-2 text-center transition-all relative overflow-hidden flex flex-col justify-center items-center ${bookingDuration === 90 ? 'border-[#c1955b] bg-amber-50 shadow-md scale-105' : 'border-slate-100 bg-white hover:bg-slate-50'}`}>
+                            <div className="absolute top-0 right-0 bg-gradient-to-r from-amber-400 to-[#c1955b] text-white text-[9px] font-black px-2 py-0.5 rounded-bl-lg shadow-sm">推薦</div>
+                            <div className={`font-black text-xl md:text-2xl ${bookingDuration === 90 ? 'text-[#9b7342]' : 'text-slate-600'}`}>90<span className="text-xs md:text-sm font-bold">m</span></div>
+                            <div className={`text-xs mt-1 font-bold ${bookingDuration === 90 ? 'text-[#b08853]' : 'text-slate-400'}`}>完整體驗</div>
+                          </button>
+                          <button type="button" onClick={() => setBookingDuration(120)} className={`p-3 md:p-4 rounded-2xl border-2 text-center transition-all flex flex-col justify-center items-center ${bookingDuration === 120 ? 'border-slate-800 bg-slate-50 shadow-md scale-105' : 'border-slate-100 bg-white hover:bg-slate-50'}`}>
+                            <div className={`font-black text-xl md:text-2xl ${bookingDuration === 120 ? 'text-slate-800' : 'text-slate-600'}`}>120<span className="text-xs md:text-sm font-bold">m</span></div>
+                            <div className={`text-xs mt-1 font-bold ${bookingDuration === 120 ? 'text-slate-600' : 'text-slate-400'}`}>深度調整</div>
+                          </button>
+                        </div>
+                     </div>
+
+                     <div>
+                        <div className="flex justify-between items-center mb-4">
+                           <h4 className="text-sm font-bold text-slate-600 bg-slate-50 p-2 rounded-lg inline-block">3. 選擇時段 ({selectedDate})</h4>
+                        </div>
+                        <div className="grid grid-cols-3 sm:grid-cols-4 gap-3 max-h-64 overflow-y-auto p-1 -mx-1 scrollbar-hide">
+                          {availableTimeSlots.map(time => {
+                            const isAvailable = checkTimeSlotAvailable(time, bookingDuration, selectedDate, selectedTeacher);
+                            return (
+                              <button
+                                key={time} type="button" disabled={!isAvailable} onClick={() => setBookingStartTime(time)}
+                                className={`py-3 md:py-3.5 rounded-xl text-base font-black transition-all border ${!isAvailable ? 'bg-slate-50 text-slate-300 border-slate-100 cursor-not-allowed opacity-60' : bookingStartTime === time ? 'bg-[#1E293B] text-white border-[#1E293B] shadow-md scale-105' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-100 hover:border-slate-300'}`}
+                              >
+                                {time}
+                              </button>
+                            );
+                          })}
+                        </div>
+                     </div>
                   </div>
-                </div>
-              </div>
+
+                  <div className="flex gap-4">
+                     <button onClick={() => { setBookingStep(1); scrollToStep(); }} className="w-1/3 bg-slate-100 text-slate-600 py-4 rounded-2xl font-bold transition-all hover:bg-slate-200">上一步</button>
+                     <button onClick={() => {
+                        setBookingStep(3);
+                        scrollToStep();
+                     }} className="w-2/3 bg-[#1E293B] text-white py-4 rounded-2xl font-bold transition-all shadow-md active:scale-[0.98] text-lg flex items-center justify-center gap-2">下一步：填寫資料 <ArrowRightIcon size={20}/></button>
+                  </div>
+               </div>
             )}
 
+            {/* Step 3: 填寫基本資料 (原 Step 1) */}
+            {bookingStep === 3 && (
+               <div className="bg-white rounded-3xl p-5 md:p-8 shadow-sm border border-slate-100 animate-fade-in">
+                 <h3 className="text-xl font-black text-slate-800 mb-6 flex items-center gap-2"><UserIcon className="text-[#1E293B]"/> 第三步：基本資料與狀況</h3>
+                 <div className="space-y-5">
+                    <div className="space-y-1.5">
+                      <label className="text-sm font-bold text-slate-600">您的姓名 <span className="text-rose-500">*</span></label>
+                      <input type="text" value={customerForm.name} onChange={e => setCustomerForm({...customerForm, name: e.target.value})} placeholder="請輸入真實姓名" className="w-full px-4 py-4 md:py-3.5 rounded-2xl md:rounded-xl border border-slate-200 outline-none focus:border-[#1E293B] focus:ring-1 focus:ring-[#1E293B] bg-slate-50 focus:bg-white transition-all text-base" required />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-sm font-bold text-slate-600">聯絡電話 <span className="text-rose-500">*</span></label>
+                      <input type="tel" value={customerForm.phone} onChange={e => setCustomerForm({...customerForm, phone: e.target.value})} placeholder="例如：0912345678" className="w-full px-4 py-4 md:py-3.5 rounded-2xl md:rounded-xl border border-slate-200 outline-none focus:border-[#1E293B] focus:ring-1 focus:ring-[#1E293B] bg-slate-50 focus:bg-white transition-all text-base" required />
+                    </div>
+                    <div className="space-y-1.5 pt-2">
+                      <label className="text-sm font-bold text-slate-600">介紹人 (選填)</label>
+                      <input type="text" value={customerForm.referral} onChange={e => setCustomerForm({...customerForm, referral: e.target.value})} placeholder="請輸入介紹人姓名" className="w-full px-4 py-4 md:py-3.5 rounded-2xl md:rounded-xl border border-slate-200 outline-none focus:border-[#1E293B] bg-slate-50 focus:bg-white transition-all text-base" />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-sm font-bold text-slate-600">目前最困擾的問題 (選填)</label>
+                      <textarea value={customerForm.concern} onChange={e => setCustomerForm({...customerForm, concern: e.target.value})} placeholder="想改善駝背、長期腰痛..." className="w-full px-4 py-4 md:py-3.5 rounded-2xl md:rounded-xl border border-slate-200 outline-none focus:border-[#1E293B] resize-none bg-slate-50 focus:bg-white transition-all text-base" rows="3" />
+                    </div>
+                    <div className="space-y-3 pt-4 border-t border-slate-100">
+                      <label className="flex items-start gap-3 text-base font-bold text-slate-700 cursor-pointer p-4 bg-slate-50 rounded-2xl border border-slate-100 hover:bg-slate-100 transition-colors">
+                          <input type="checkbox" checked={customerForm.hasMedical} onChange={e => setCustomerForm({...customerForm, hasMedical: e.target.checked})} className="w-5 h-5 mt-0.5 text-[#1E293B] rounded cursor-pointer border-slate-300 focus:ring-[#1E293B]" />
+                          <div>
+                            近期是否有懷孕、開刀、受傷？
+                            <span className="block text-xs text-slate-500 font-medium mt-1">我們會為您安排最安全的課程</span>
+                          </div>
+                      </label>
+                      {customerForm.hasMedical && (
+                          <input type="text" value={customerForm.medicalDetails} onChange={e => setCustomerForm({...customerForm, medicalDetails: e.target.value})} placeholder="請簡述您的狀況 (例如: 右肩一個月前開刀)..." className="w-full px-4 py-4 rounded-2xl border-2 border-amber-200 outline-none text-base bg-amber-50 focus:border-amber-400 transition-colors" />
+                      )}
+                    </div>
+                    
+                    <div className="flex gap-4 mt-8">
+                       <button onClick={() => { setBookingStep(2); scrollToStep(); }} className="w-1/3 bg-slate-100 text-slate-600 py-4 rounded-2xl font-bold transition-all hover:bg-slate-200">返回上一步</button>
+                       <button 
+                         onClick={() => {
+                           if(!customerForm.name.trim() || !customerForm.phone.trim()) { showToast('請填寫姓名與電話才能進入下一步喔！'); return; }
+                           setBookingStep(4);
+                           scrollToStep();
+                         }} 
+                         className="w-2/3 bg-[#1E293B] hover:bg-black text-white py-4 md:py-4 rounded-2xl font-bold transition-all shadow-md hover:shadow-lg active:scale-[0.98] text-lg flex items-center justify-center gap-2"
+                       >
+                         確認預約資訊 <ArrowRightIcon size={20} />
+                       </button>
+                    </div>
+                 </div>
+               </div>
+            )}
+
+            {/* Step 4: 確認預約資訊 */}
+            {bookingStep === 4 && (
+               <div className="bg-white rounded-3xl p-5 md:p-8 shadow-sm border border-slate-100 animate-fade-in">
+                  <h3 className="text-2xl font-black text-slate-800 mb-6 text-center">最後一步：確認預約資訊</h3>
+                  
+                  <div className="bg-slate-50/80 rounded-3xl p-6 border border-slate-200 space-y-4 mb-8 shadow-inner relative overflow-hidden">
+                     <div className="absolute -right-6 -top-6 text-slate-200 opacity-30"><CheckIcon size={120} /></div>
+                     <div className="relative z-10 space-y-5">
+                       <div className="flex justify-between items-center border-b border-slate-200/60 pb-4">
+                          <span className="text-slate-500 font-bold text-sm">預約學員</span>
+                          <span className="text-slate-800 font-black text-lg">{customerForm.name}</span>
+                       </div>
+                       <div className="flex justify-between items-center border-b border-slate-200/60 pb-4">
+                          <span className="text-slate-500 font-bold text-sm">聯絡電話</span>
+                          <span className="text-slate-800 font-black text-lg">{customerForm.phone}</span>
+                       </div>
+
+                       {/* 顯示選填備註與狀況 */}
+                       {customerForm.referral && (
+                          <div className="flex justify-between items-center border-b border-slate-200/60 pb-4">
+                             <span className="text-slate-500 font-bold text-sm">介紹人</span>
+                             <span className="text-slate-800 font-bold text-base">{customerForm.referral}</span>
+                          </div>
+                       )}
+                       {customerForm.concern && (
+                          <div className="flex flex-col gap-2 border-b border-slate-200/60 pb-4">
+                             <span className="text-slate-500 font-bold text-sm">困擾的問題</span>
+                             <span className="text-slate-800 font-bold text-sm bg-white p-3 rounded-xl border border-slate-100">{customerForm.concern}</span>
+                          </div>
+                       )}
+                       {customerForm.hasMedical && (
+                          <div className="flex flex-col gap-2 border-b border-slate-200/60 pb-4">
+                             <span className="text-rose-500 font-bold text-sm flex items-center gap-1">⚠️ 特殊/受傷狀況</span>
+                             <span className="text-rose-700 font-bold text-sm bg-rose-50 p-3 rounded-xl border border-rose-100">{customerForm.medicalDetails || '有特殊狀況 (未填寫細節)'}</span>
+                          </div>
+                       )}
+
+                       <div className="flex justify-between items-center border-b border-slate-200/60 pb-4">
+                          <span className="text-slate-500 font-bold text-sm">防護師 / 教練</span>
+                          <span className="text-indigo-700 font-black text-lg bg-indigo-50 px-3 py-1 rounded-lg">{selectedTeacher === 'all' ? '系統安排 (不指定)' : selectedTeacher}</span>
+                       </div>
+                       <div className="flex justify-between items-center border-b border-slate-200/60 pb-4">
+                          <span className="text-slate-500 font-bold text-sm">日期與時間</span>
+                          <div className="text-right">
+                             <div className="text-slate-800 font-black text-lg">{selectedDate}</div>
+                             <div className="text-slate-600 font-bold text-base mt-0.5">{bookingStartTime} - {minsToTime(timeToMins(bookingStartTime) + bookingDuration)}</div>
+                          </div>
+                       </div>
+                       <div className="flex justify-between items-center pb-2">
+                          <span className="text-slate-500 font-bold text-sm">課程長度</span>
+                          <span className="text-[#c1955b] font-black text-lg bg-amber-50 px-3 py-1 rounded-lg border border-amber-100">{bookingDuration} 分鐘</span>
+                       </div>
+                     </div>
+                  </div>
+
+                  <div className="flex gap-4">
+                     <button onClick={() => { setBookingStep(3); scrollToStep(); }} className="w-1/3 bg-slate-100 text-slate-600 py-4 rounded-2xl font-bold transition-all hover:bg-slate-200">修改時間</button>
+                     <button onClick={handleConfirmBookingSubmit} className="w-2/3 bg-emerald-600 text-white py-4 rounded-2xl font-black transition-all shadow-lg hover:bg-emerald-700 hover:shadow-xl hover:-translate-y-1 active:scale-[0.98] text-lg flex items-center justify-center gap-2">
+                       <CheckIcon size={24} /> 確定送出預約
+                     </button>
+                  </div>
+               </div>
+            )}
           </div>
         )}
 
@@ -2238,6 +2401,7 @@ export default function ZhudongBookingApp() {
 
             <div className="flex gap-2 overflow-x-auto border-b-2 border-slate-100 pb-px scrollbar-hide">
               <button onClick={() => setAdminTab('courses')} className={`px-6 py-3 font-bold text-sm whitespace-nowrap transition-all border-b-2 -mb-px flex items-center gap-2 ${adminTab === 'courses' ? 'border-indigo-600 text-indigo-600 bg-indigo-50/50 rounded-t-xl' : 'border-transparent text-slate-500 hover:text-slate-700 hover:bg-slate-50 rounded-t-xl'}`}>🗓️ 約課與教練管理</button>
+              <button onClick={() => setAdminTab('customers')} className={`px-6 py-3 font-bold text-sm whitespace-nowrap transition-all border-b-2 -mb-px flex items-center gap-2 ${adminTab === 'customers' ? 'border-purple-500 text-purple-600 bg-purple-50/50 rounded-t-xl' : 'border-transparent text-slate-500 hover:text-slate-700 hover:bg-slate-50 rounded-t-xl'}`}>👥 客戶資料</button>
               <button onClick={() => setAdminTab('cooperations')} className={`px-6 py-3 font-bold text-sm whitespace-nowrap transition-all border-b-2 -mb-px flex items-center gap-2 ${adminTab === 'cooperations' ? 'border-emerald-600 text-emerald-600 bg-emerald-50/50 rounded-t-xl' : 'border-transparent text-slate-500 hover:text-slate-700 hover:bg-slate-50 rounded-t-xl'}`}>🤝 接洽管理</button>
               <button onClick={() => setAdminTab('products')} className={`px-6 py-3 font-bold text-sm whitespace-nowrap transition-all border-b-2 -mb-px flex items-center gap-2 ${adminTab === 'products' ? 'border-orange-500 text-orange-600 bg-orange-50/50 rounded-t-xl' : 'border-transparent text-slate-500 hover:text-slate-700 hover:bg-slate-50 rounded-t-xl'}`}>🛒 產品管理</button>
               <button onClick={() => setAdminTab('brand')} className={`px-6 py-3 font-bold text-sm whitespace-nowrap transition-all border-b-2 -mb-px flex items-center gap-2 ${adminTab === 'brand' ? 'border-pink-500 text-pink-600 bg-pink-50/50 rounded-t-xl' : 'border-transparent text-slate-500 hover:text-slate-700 hover:bg-slate-50 rounded-t-xl'}`}>📖 品牌與活動</button>
@@ -2419,7 +2583,112 @@ export default function ZhudongBookingApp() {
               </div>
             )}
 
-            {/* Other Admin Tabs Omitted for Brevity in Diff - Will just render the existing content perfectly */}
+            {adminTab === 'customers' && (
+              <div className="space-y-6 animate-fade-in pt-2">
+                <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-6">
+                  <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
+                    <h3 className="text-xl font-bold text-slate-800 flex items-center gap-2"><UsersIcon className="text-purple-600" /> 客戶資料庫</h3>
+                    <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 w-full md:w-64 focus-within:bg-white focus-within:border-purple-300 transition-colors">
+                       <SearchIcon size={16} className="text-slate-400" />
+                       <input type="text" placeholder="搜尋姓名或電話..." value={customerSearch} onChange={e => setCustomerSearch(e.target.value)} className="bg-transparent outline-none text-sm w-full font-medium" />
+                    </div>
+                  </div>
+                  
+                  {(() => {
+                    // 自動匯整：從預約與檢測紀錄中取出所有獨特客戶
+                    const uniqueCustomersMap = {};
+                    appointments.forEach(ap => {
+                        if (!ap.phone) return;
+                        if (!uniqueCustomersMap[ap.phone]) {
+                            uniqueCustomersMap[ap.phone] = { phone: ap.phone, name: ap.studentName, appointmentsCount: 0, assessments: [], concern: ap.concern, medicalDetails: ap.hasMedical ? ap.medicalDetails || '有特殊狀況' : null };
+                        }
+                        uniqueCustomersMap[ap.phone].appointmentsCount++;
+                        if (ap.concern) uniqueCustomersMap[ap.phone].concern = ap.concern;
+                        if (ap.hasMedical) uniqueCustomersMap[ap.phone].medicalDetails = ap.medicalDetails || '有特殊狀況';
+                    });
+                    assessments.forEach(ass => {
+                        if (!ass.phone) return;
+                        if (!uniqueCustomersMap[ass.phone]) {
+                            uniqueCustomersMap[ass.phone] = { phone: ass.phone, name: ass.studentName, appointmentsCount: 0, assessments: [] };
+                        }
+                        uniqueCustomersMap[ass.phone].assessments.push(ass);
+                    });
+                    
+                    // 將每個客戶的檢測資料依照日期排序，取得最新資料
+                    Object.values(uniqueCustomersMap).forEach(cust => {
+                        cust.assessments.sort((a, b) => new Date(b.date) - new Date(a.date));
+                    });
+
+                    // 篩選與排序（依上課次數多寡排序）
+                    const customerList = Object.values(uniqueCustomersMap)
+                        .filter(c => c.name.includes(customerSearch) || c.phone.includes(customerSearch))
+                        .sort((a, b) => b.appointmentsCount - a.appointmentsCount);
+
+                    return (
+                       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+                         {customerList.map(cust => (
+                            <div key={cust.phone} className="p-5 rounded-2xl border border-slate-100 bg-white hover:shadow-md transition-shadow relative overflow-hidden flex flex-col max-h-[600px]">
+                               <div className="absolute top-0 right-0 bg-purple-100 text-purple-700 text-[10px] font-black px-3 py-1.5 rounded-bl-xl shadow-sm">
+                                  累計 {cust.appointmentsCount} 堂
+                               </div>
+                               <div className="font-black text-lg text-slate-800 mb-1">{cust.name}</div>
+                               <div className="text-sm text-slate-500 mb-4 font-bold flex items-center gap-1.5">
+                                 📞 {cust.phone}
+                               </div>
+
+                               {cust.medicalDetails && (
+                                 <div className="text-xs bg-rose-50 text-rose-600 p-2.5 rounded-xl mb-2 font-bold border border-rose-100">⚠️ {cust.medicalDetails}</div>
+                               )}
+                               {cust.concern && (
+                                 <div className="text-xs bg-slate-50 border border-slate-100 text-slate-600 p-2.5 rounded-xl mb-3 font-medium"><span className="font-bold text-slate-700">💬 主述問題：</span>{cust.concern}</div>
+                               )}
+
+                               {cust.assessments.length > 0 ? (
+                                 <div className="mt-2 pt-4 border-t border-slate-100 flex-1 flex flex-col min-h-0">
+                                   <div className="mb-4 shrink-0">
+                                     <span className="text-xs font-black text-slate-500 bg-slate-100 px-2 py-1 rounded-md mb-2 inline-block">初次評估 ({cust.assessments[cust.assessments.length - 1].date})</span>
+                                     <div className="grid grid-cols-2 gap-2 text-xs">
+                                       <div className="bg-slate-50 p-2.5 rounded-lg border border-slate-100 flex justify-between items-center"><span className="text-slate-400 font-bold">安靜心率</span><span className="font-black text-slate-700 text-sm">{cust.assessments[cust.assessments.length - 1].metrics.restingHR || '-'}</span></div>
+                                       <div className="bg-slate-50 p-2.5 rounded-lg border border-slate-100 flex justify-between items-center"><span className="text-slate-400 font-bold">棒式核心</span><span className="font-black text-slate-700 text-sm">{cust.assessments[cust.assessments.length - 1].metrics.plank || '-'}s</span></div>
+                                     </div>
+                                   </div>
+                                   
+                                   <h5 className="text-xs font-black text-slate-700 mb-2 border-b border-slate-100 pb-1 shrink-0">歷次上課紀錄與數據 ({cust.assessments.length}筆)</h5>
+                                   <div className="overflow-y-auto space-y-2 pr-1 scrollbar-hide flex-1 pb-2">
+                                      {cust.assessments.map(ass => (
+                                        <div key={ass.id} className="bg-white p-3 rounded-xl border border-slate-200 shadow-sm text-xs transition-colors hover:border-purple-200">
+                                          <div className="flex justify-between items-center mb-1.5 border-b border-slate-50 pb-1">
+                                            <span className="font-black text-indigo-600">{ass.date}</span>
+                                            <span className="font-bold text-slate-500 bg-slate-50 px-2 py-0.5 rounded">教練: {ass.teacherName}</span>
+                                          </div>
+                                          <div className="flex flex-wrap gap-x-3 gap-y-1 mb-2 text-slate-500 font-medium">
+                                            <span>心率: <span className="text-slate-700 font-bold">{ass.metrics.restingHR || '-'}</span></span>
+                                            <span>疲勞: <span className="text-slate-700 font-bold">{ass.metrics.sRPE || '-'}</span></span>
+                                            <span>棒式: <span className="text-slate-700 font-bold">{ass.metrics.plank || '-'}s</span></span>
+                                            <span title="KTW 膝牆距 (左/右)">KTW: <span className="text-slate-700 font-bold">{ass.metrics.ktwLeft || '-'}/{ass.metrics.ktwRight || '-'}</span></span>
+                                          </div>
+                                          {ass.coachNotes && (
+                                             <div className="bg-purple-50/50 p-2 rounded border border-purple-50 text-slate-700 font-medium leading-relaxed mt-1">
+                                               ✍️ {ass.coachNotes}
+                                             </div>
+                                          )}
+                                        </div>
+                                      ))}
+                                   </div>
+                                 </div>
+                               ) : (
+                                 <div className="mt-4 pt-4 border-t border-slate-100 text-xs text-slate-400 font-medium text-center flex-1 flex items-center justify-center">尚未建立檢測紀錄</div>
+                               )}
+                            </div>
+                         ))}
+                         {customerList.length === 0 && <div className="col-span-full text-center py-12 text-slate-500 font-medium bg-slate-50 rounded-2xl border border-dashed border-slate-200">找不到符合的客戶資料 🥺</div>}
+                       </div>
+                    );
+                  })()}
+                </div>
+              </div>
+            )}
+
             {adminTab === 'cooperations' && (
               <div className="space-y-6 animate-fade-in pt-2">
                 <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-6">
@@ -2500,37 +2769,94 @@ export default function ZhudongBookingApp() {
               <div className="space-y-6 animate-fade-in pt-2">
                 <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-6">
                   <h3 className="text-xl font-bold text-slate-800 mb-6 flex items-center gap-2"><MegaphoneIcon /> 品牌首頁內容管理</h3>
-                  <form onSubmit={handleSaveAboutContent} className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                     <div className="space-y-4">
-                        <div className="space-y-1">
-                           <label className="text-xs font-medium text-slate-500">主標題</label>
-                           <input type="text" name="heroTitle" defaultValue={aboutContent.heroTitle} className="w-full px-4 py-2.5 rounded-xl border border-slate-200 outline-none font-bold text-slate-800" required />
-                        </div>
-                        <div className="space-y-1">
-                           <label className="text-xs font-medium text-slate-500">副標題</label>
-                           <input type="text" name="heroSubtitle" defaultValue={aboutContent.heroSubtitle} className="w-full px-4 py-2.5 rounded-xl border border-slate-200 outline-none text-sm text-slate-600" required />
-                        </div>
-                        <div className="space-y-1">
-                           <label className="text-xs font-medium text-slate-500">品牌介紹內文</label>
-                           <textarea name="heroDescription" defaultValue={aboutContent.heroDescription} rows="5" className="w-full px-4 py-2.5 rounded-xl border border-slate-200 outline-none resize-none text-sm text-slate-600 leading-relaxed" required></textarea>
-                        </div>
+                  <form onSubmit={handleSaveAboutContent} className="space-y-8">
+                     
+                     <div className="bg-slate-50 p-5 rounded-xl border border-slate-100 grid grid-cols-1 md:grid-cols-2 gap-8">
+                       <div className="col-span-1 md:col-span-2">
+                         <h4 className="font-black text-slate-700 flex items-center gap-2 mb-2">1. 首頁主視覺與頂部介紹</h4>
+                       </div>
+                       <div className="space-y-4">
+                          <div className="space-y-1">
+                             <label className="text-xs font-bold text-slate-500">主標題</label>
+                             <input type="text" name="heroTitle" defaultValue={aboutContent.heroTitle} className="w-full px-4 py-2.5 rounded-xl border border-slate-200 outline-none font-bold text-slate-800" required />
+                          </div>
+                          <div className="space-y-1">
+                             <label className="text-xs font-bold text-slate-500">副標題</label>
+                             <input type="text" name="heroSubtitle" defaultValue={aboutContent.heroSubtitle} className="w-full px-4 py-2.5 rounded-xl border border-slate-200 outline-none text-sm text-slate-600" required />
+                          </div>
+                          <div className="space-y-1">
+                             <label className="text-xs font-bold text-slate-500">品牌介紹內文</label>
+                             <textarea name="heroDescription" defaultValue={aboutContent.heroDescription} rows="4" className="w-full px-4 py-2.5 rounded-xl border border-slate-200 outline-none resize-none text-sm text-slate-600 leading-relaxed" required></textarea>
+                          </div>
+                       </div>
+                       <div className="space-y-2">
+                          <label className="text-xs font-bold text-slate-500 block">品牌主視覺 Logo 或圖片</label>
+                          <div className="w-full h-48 bg-white rounded-2xl border border-slate-200 flex flex-col items-center justify-center relative overflow-hidden group">
+                             {aboutUploadedPhoto || aboutContent.heroImage ? (
+                               <img src={aboutUploadedPhoto || aboutContent.heroImage} alt="Brand Hero" className="w-full h-full object-contain mix-blend-multiply" />
+                             ) : (
+                               <ImageIcon className="text-slate-300 w-12 h-12 mb-2" />
+                             )}
+                             <div className="absolute inset-0 bg-slate-900/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                               <label className="bg-white text-slate-800 px-4 py-2 rounded-lg font-bold text-sm cursor-pointer shadow-lg hover:scale-105 transition-transform">
+                                 更換圖片 <input type="file" accept="image/*" onChange={handleAboutPhotoUpload} className="hidden" />
+                               </label>
+                             </div>
+                          </div>
+                       </div>
                      </div>
-                     <div className="space-y-4">
-                        <label className="text-xs font-medium text-slate-500 block">品牌主視覺 (Hero Image)</label>
-                        <div className="w-full h-48 bg-slate-50 rounded-2xl border-2 border-dashed border-slate-200 flex flex-col items-center justify-center relative overflow-hidden group">
-                           {aboutUploadedPhoto || aboutContent.heroImage ? (
-                             <img src={aboutUploadedPhoto || aboutContent.heroImage} alt="Brand Hero" className="w-full h-full object-contain mix-blend-multiply" />
-                           ) : (
-                             <ImageIcon className="text-slate-300 w-12 h-12 mb-2" />
-                           )}
-                           <div className="absolute inset-0 bg-slate-900/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                             <label className="bg-white text-slate-800 px-4 py-2 rounded-lg font-bold text-sm cursor-pointer shadow-lg hover:scale-105 transition-transform">
-                               更換圖片 <input type="file" accept="image/*" onChange={handleAboutPhotoUpload} className="hidden" />
-                             </label>
-                           </div>
-                        </div>
-                        <button type="submit" className="w-full bg-slate-800 hover:bg-slate-900 text-white py-3.5 rounded-xl font-bold shadow-md transition-transform active:scale-[0.98]">💾 儲存品牌設定</button>
+
+                     <div className="bg-slate-50 p-5 rounded-xl border border-slate-100">
+                       <h4 className="font-black text-slate-700 flex items-center gap-2 mb-4">2. 三大核心服務編輯</h4>
+                       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                         <div className="bg-white p-4 rounded-xl border border-slate-200 space-y-3">
+                            <div className="flex items-center gap-2 font-bold text-blue-600 mb-2"><HeartIcon size={18}/> 服務一</div>
+                            <input type="text" name="service1Title" defaultValue={aboutContent.service1Title} className="w-full px-3 py-2 rounded-lg border border-slate-200 outline-none font-bold text-sm" placeholder="標題" />
+                            <textarea name="service1Desc" defaultValue={aboutContent.service1Desc} rows="4" className="w-full px-3 py-2 rounded-lg border border-slate-200 outline-none resize-none text-xs text-slate-600" placeholder="內容說明"></textarea>
+                         </div>
+                         <div className="bg-white p-4 rounded-xl border border-slate-200 space-y-3">
+                            <div className="flex items-center gap-2 font-bold text-orange-600 mb-2"><TargetIcon size={18}/> 服務二</div>
+                            <input type="text" name="service2Title" defaultValue={aboutContent.service2Title} className="w-full px-3 py-2 rounded-lg border border-slate-200 outline-none font-bold text-sm" placeholder="標題" />
+                            <textarea name="service2Desc" defaultValue={aboutContent.service2Desc} rows="4" className="w-full px-3 py-2 rounded-lg border border-slate-200 outline-none resize-none text-xs text-slate-600" placeholder="內容說明"></textarea>
+                         </div>
+                         <div className="bg-white p-4 rounded-xl border border-slate-200 space-y-3">
+                            <div className="flex items-center gap-2 font-bold text-emerald-600 mb-2"><ActivityIcon size={18}/> 服務三</div>
+                            <input type="text" name="service3Title" defaultValue={aboutContent.service3Title} className="w-full px-3 py-2 rounded-lg border border-slate-200 outline-none font-bold text-sm" placeholder="標題" />
+                            <textarea name="service3Desc" defaultValue={aboutContent.service3Desc} rows="4" className="w-full px-3 py-2 rounded-lg border border-slate-200 outline-none resize-none text-xs text-slate-600" placeholder="內容說明"></textarea>
+                         </div>
+                       </div>
                      </div>
+
+                     <div className="bg-slate-50 p-5 rounded-xl border border-slate-100">
+                       <h4 className="font-black text-slate-700 flex items-center gap-2 mb-4">3. 聯絡資訊與社群連結</h4>
+                       <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4">
+                         <div className="space-y-3">
+                            <h5 className="font-bold text-slate-600 text-sm">LINE 官方帳號</h5>
+                            <div className="flex gap-2"><input type="text" name="lineId" defaultValue={aboutContent.lineId} className="w-1/2 px-3 py-2 rounded-lg border border-slate-200 text-sm" placeholder="顯示文字 (如 @ID)" /><input type="text" name="lineLink" defaultValue={aboutContent.lineLink} className="w-1/2 px-3 py-2 rounded-lg border border-slate-200 text-sm" placeholder="連結 URL" /></div>
+                         </div>
+                         <div className="space-y-3">
+                            <h5 className="font-bold text-slate-600 text-sm">Facebook 粉絲專頁</h5>
+                            <div className="flex gap-2"><input type="text" name="fbName" defaultValue={aboutContent.fbName} className="w-1/2 px-3 py-2 rounded-lg border border-slate-200 text-sm" placeholder="顯示名稱" /><input type="text" name="fbLink" defaultValue={aboutContent.fbLink} className="w-1/2 px-3 py-2 rounded-lg border border-slate-200 text-sm" placeholder="連結 URL" /></div>
+                         </div>
+                         <div className="space-y-3">
+                            <h5 className="font-bold text-slate-600 text-sm">Instagram</h5>
+                            <div className="flex gap-2"><input type="text" name="igName" defaultValue={aboutContent.igName} className="w-1/2 px-3 py-2 rounded-lg border border-slate-200 text-sm" placeholder="顯示名稱" /><input type="text" name="igLink" defaultValue={aboutContent.igLink} className="w-1/2 px-3 py-2 rounded-lg border border-slate-200 text-sm" placeholder="連結 URL" /></div>
+                         </div>
+                         <div className="space-y-3">
+                            <h5 className="font-bold text-slate-600 text-sm">實體聯絡資訊</h5>
+                            <div className="flex flex-col gap-2">
+                               <input type="text" name="address" defaultValue={aboutContent.address} className="w-full px-3 py-2 rounded-lg border border-slate-200 text-sm" placeholder="地址" />
+                               <input type="text" name="phone" defaultValue={aboutContent.phone} className="w-full px-3 py-2 rounded-lg border border-slate-200 text-sm" placeholder="連絡電話" />
+                            </div>
+                         </div>
+                         <div className="md:col-span-2 space-y-1">
+                            <label className="text-sm font-bold text-slate-600">Google Map 嵌入語法 (src 網址)</label>
+                            <input type="text" name="mapUrl" defaultValue={aboutContent.mapUrl} className="w-full px-3 py-2 rounded-lg border border-slate-200 text-sm font-mono bg-white" placeholder="https://www.google.com/maps/embed?..." />
+                         </div>
+                       </div>
+                     </div>
+
+                     <button type="submit" className="w-full bg-slate-800 hover:bg-slate-900 text-white py-4 rounded-xl font-bold shadow-md transition-transform active:scale-[0.98] text-lg">💾 一鍵儲存所有品牌設定</button>
                   </form>
                 </div>
 
@@ -2687,6 +3013,17 @@ export default function ZhudongBookingApp() {
         )}
 
       </main>
+
+      {/* Mobile Bottom Navigation Bar */}
+      <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 z-50 flex justify-between items-center px-1 pb-safe shadow-[0_-4px_10px_rgba(0,0,0,0.05)]">
+         <button onClick={() => setView('customer')} className={`flex flex-col items-center justify-center w-full py-3 transition-colors ${view === 'customer' ? 'text-indigo-600' : 'text-slate-400 hover:text-slate-600'}`}><ViewCalendarIcon size={22}/><span className="text-[10px] font-bold mt-1">約課</span></button>
+         <button onClick={() => setView('progress')} className={`flex flex-col items-center justify-center w-full py-3 transition-colors ${view === 'progress' ? 'text-indigo-600' : 'text-slate-400 hover:text-slate-600'}`}><ActivityIcon size={22}/><span className="text-[10px] font-bold mt-1">進步</span></button>
+         <button onClick={() => setView('about')} className={`flex flex-col items-center justify-center w-full py-3 transition-colors ${view === 'about' ? 'text-blue-500' : 'text-slate-400 hover:text-slate-600'}`}><InfoIcon size={22}/><span className="text-[10px] font-bold mt-1">品牌</span></button>
+         <button onClick={() => setView('shop')} className={`flex flex-col items-center justify-center w-full py-3 transition-colors ${view === 'shop' ? 'text-orange-500' : 'text-slate-400 hover:text-slate-600'}`}><ShoppingCartIcon size={22}/><span className="text-[10px] font-bold mt-1">商城</span></button>
+         <button onClick={() => setView('contact')} className={`flex flex-col items-center justify-center w-full py-3 transition-colors ${view === 'contact' ? 'text-emerald-500' : 'text-slate-400 hover:text-slate-600'}`}><MessageSquareIcon size={22}/><span className="text-[10px] font-bold mt-1">接洽</span></button>
+      </div>
+
     </div>
   );
 }
+export default App;
