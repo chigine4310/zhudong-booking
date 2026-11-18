@@ -1,5 +1,7 @@
 import { FaInstagram } from "react-icons/fa";
 import { FaFacebook } from "react-icons/fa";
+import logoMain from './assets/logo1.jpg';
+import jdHeroLogo from './assets/logo6.jpg';
 import React, { useState, useRef, useEffect } from 'react';
 import { 
   Calendar as ViewCalendarIcon,
@@ -49,7 +51,6 @@ const logoTeacher = 'https://placehold.co/400x200/e0e7ff/4f46e5?text=Teacher+Log
 const logoAdmin = 'https://placehold.co/400x200/e0e7ff/4f46e5?text=Admin+Logo';
 const logoContact = 'https://placehold.co/800x400/0f172a/ffffff?text=Rebuild+Training+Lab';
 const logoShop = 'https://placehold.co/400x200/fff7ed/ea580c?text=Shop+Logo';
-const logoMain = 'https://placehold.co/400x200/ffffff/000000?text=Main+Logo';
 
 const MAX_CAPACITY = 4;
 
@@ -1968,7 +1969,7 @@ export default function ZhudongBookingApp() {
              <div className="bg-brand-navy text-brand-light p-8 flex flex-col items-center justify-center min-h-[80vh] relative rounded-b-[40px] shadow-sm">
                  <div className="mb-8 w-full flex justify-center">
                      <img 
-                       src="5B69D8EA-A3EA-4C32-8631-71F64BAC2592_2.jpg" 
+                       src={jdHeroLogo} 
                        alt="JD Rebuild" 
                        className="h-40 md:h-48 object-contain mx-auto invert opacity-90 mix-blend-screen"
                      />
