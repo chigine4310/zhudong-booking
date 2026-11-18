@@ -1,4 +1,6 @@
-import React, { useState, useRef } from 'react';
+import { FaInstagram } from "react-icons/fa";
+import { FaFacebook } from "react-icons/fa";
+import React, { useState, useRef, useEffect } from 'react';
 import { 
   Calendar as ViewCalendarIcon,
   Users as UsersIcon,
@@ -34,9 +36,13 @@ import {
   TrendingUp as TrendingUpIcon,
   TrendingDown as TrendingDownIcon,
   Trophy as TrophyIcon,
+  
   MapPin as MapPinIcon,
   Phone as PhoneIcon,
-  MessageCircle as MessageCircleIcon
+  MessageCircle as MessageCircleIcon,
+  Eye as EyeIcon,
+  EyeOff as EyeOffIcon,
+  Share2 as ShareIcon
 } from 'lucide-react';
 
 const logoTeacher = 'https://placehold.co/400x200/e0e7ff/4f46e5?text=Teacher+Logo';
@@ -71,9 +77,10 @@ const INITIAL_TAG_CATEGORIES = {
   }
 };
 
-function App() {
+export default function ZhudongBookingApp() {
   // --- State Management ---
-  const [view, setView] = useState('customer');
+  const [view, setView] = useState('home');
+  const [faqOpen, setFaqOpen] = useState(null);
   
   const [tagCategories, setTagCategories] = useState(INITIAL_TAG_CATEGORIES);
   const [newTagInputs, setNewTagInputs] = useState({});
@@ -125,7 +132,7 @@ function App() {
   const [bookingStartTime, setBookingStartTime] = useState('10:00');
   
   // 約課與兩步篩選法狀態
-  const [bookingFlowType, setBookingFlowType] = useState('direct'); // 'guided' (導引配對) 或 'direct' (直接指定)
+  const [bookingFlowType, setBookingFlowType] = useState('guided'); // 'guided' (導引配對) 或 'direct' (直接指定)
   const [bookingIntent, setBookingIntent] = useState(null); // 'relax' 或 'train'
   const [selectedTags, setSelectedTags] = useState([]);
 
@@ -184,10 +191,12 @@ function App() {
   ]);
 
   const [aboutContent, setAboutContent] = useState({
-    heroTitle: '讓健康成為日常',
-    heroSubtitle: '健康不是短暫的結果，是一段需要持續累積的過程',
-    heroDescription: '來築動，讓運動防護師陪伴您＃讓健康成為日常',
-    heroImage: logoMain,
+    heroTitle: '築動防護教室',
+    heroSubtitle: '讓健康成為日常',
+    heroDescription: '用科學測量，看見自己每一次的進步。',
+    heroImage: '365DC173-C39C-4627-AEB4-33DEA0159011.jpg',
+    coachTeamImage: 'https://placehold.co/800x600/e2e8f0/64748b?text=Coach+Team',
+    labEnvImage: 'https://placehold.co/800x600/e2e8f0/64748b?text=Lab+Environment',
     service1Title: '運動按摩',
     service1Desc: '透過專業的手法放鬆深層筋膜，精準解除激痛點。適合長期的肌肉緊繃、運動後的疲勞恢復，以及改善因代償產生的痠痛問題。',
     service2Title: '運動訓練',
@@ -202,6 +211,8 @@ function App() {
     mapUrl: 'https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3614.4676874538837!2d121.53123847604654!3d25.0521328778059!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x3442a967a5b3a6cd%3A0x6e7ed6c6a469a4d8!2z5Lit5bGx5Y2A!5e0!3m2!1szh-TW!2stw!4v1700000000000!5m2!1szh-TW!2stw'
   });
   const [aboutUploadedPhoto, setAboutUploadedPhoto] = useState('');
+  const [coachUploadedPhoto, setCoachUploadedPhoto] = useState('');
+  const [labUploadedPhoto, setLabUploadedPhoto] = useState('');
 
   const [recentEvents, setRecentEvents] = useState([
     { id: 'e1', title: '2026 企業健康防護講座', date: '2026-10-15', description: '受邀至科技公司進行肩頸放鬆與正確坐姿指導，超過百人參與，獲得熱烈迴響。', photo: 'https://placehold.co/600x400/e0e7ff/4f46e5?text=Corporate+Event' }
@@ -215,6 +226,19 @@ function App() {
   const [searchModalOpen, setSearchModalOpen] = useState(false);
   const [searchPhone, setSearchPhone] = useState('');
   const [myAppointments, setMyAppointments] = useState(null);
+
+  // --- 新增：課後滿意度評價狀態 ---
+  const [feedbacks, setFeedbacks] = useState([
+    { id: 'f1', appointmentId: 'ap1', rating: 5, comment: '教練超棒的！肩頸完全放鬆了，這次的課程非常開心～', timestamp: '2026-11-10T12:00:00Z' }
+  ]);
+  const [feedbackModal, setFeedbackModal] = useState({ isOpen: false, data: null, rating: 5, comment: '' });
+
+  // --- 新增：分享圖卡與隱私同意狀態 ---
+  const CURRENT_CONSENT_VERSION = 'v1.0';
+  const [userConsents, setUserConsents] = useState({});
+  const [shareConsentState, setShareConsentState] = useState({ isOpen: false, isMinor: false, agreedShare: false, agreedPromo: false, parentConsent: false, parentName: '' });
+  const [sharePreviewState, setSharePreviewState] = useState({ isOpen: false, format: '9:16', theme: 'dark', showName: true, selectedMetricIdx: 0 });
+  const [showPrivacySettings, setShowPrivacySettings] = useState(false);
 
   // 教練專長資料 (導入 Tag 架構)
   const [teacherProfiles, setTeacherProfiles] = useState({
@@ -323,6 +347,193 @@ function App() {
       if (teacherConflict) return false;
       return true;
     }
+  };
+
+  const handleToggleTeacherVisibility = (name) => {
+    setTeacherProfiles(prev => ({
+      ...prev,
+      [name]: {
+        ...prev[name],
+        isVisible: prev[name].isVisible === false ? true : false
+      }
+    }));
+    showToast(`已${teacherProfiles[name].isVisible === false ? '顯示' : '隱藏'}教練：${name}`);
+  };
+
+  const getShareableMetrics = (progressList) => {
+    if (!progressList || progressList.length < 2) return [];
+    const latest = progressList[0].metrics;
+    const first = progressList[progressList.length - 1].metrics;
+    const options = [];
+    
+    if (latest.plank && first.plank) {
+        options.push({ id: 'plank', name: '核心耐力', metricName: '棒式秒數', oldVal: first.plank, newVal: latest.plank, diff: latest.plank - first.plank, unit: '秒', series: progressList.map(p => p.metrics.plank).reverse() });
+    }
+    if (latest.ktwLeft && first.ktwLeft) {
+         const oldK = (first.ktwLeft + first.ktwRight) / 2;
+         const newK = (latest.ktwLeft + latest.ktwRight) / 2;
+         options.push({ id: 'ktw', name: '下肢活動度', metricName: '腳踝活動度', oldVal: oldK.toFixed(1), newVal: newK.toFixed(1), diff: (newK - oldK).toFixed(1), unit: 'cm', series: progressList.map(p => (p.metrics.ktwLeft + p.metrics.ktwRight)/2).reverse() });
+    }
+    if (latest.shoulderLeft && first.shoulderLeft) {
+         const oldS = (first.shoulderLeft + first.shoulderRight) / 2;
+         const newS = (latest.shoulderLeft + latest.shoulderRight) / 2;
+         options.push({ id: 'shoulder', name: '上肢靈活度', metricName: '肩關節活動度', oldVal: oldS.toFixed(1), newVal: newS.toFixed(1), diff: (newS - oldS).toFixed(1), unit: '度', series: progressList.map(p => (p.metrics.shoulderLeft + p.metrics.shoulderRight)/2).reverse() });
+    }
+    // 如果沒有算出差異，給個預設項目
+    if (options.length === 0) {
+         options.push({ id: 'attendance', name: '累積防護次數', metricName: '上課堂數', oldVal: 1, newVal: progressList.length, diff: progressList.length - 1, unit: '堂', series: progressList.map((_, i) => progressList.length - i).reverse() });
+    }
+    return options;
+  };
+
+  const handleShareClick = () => {
+    const existingConsent = userConsents[progressPhone];
+    if (existingConsent && existingConsent.version === CURRENT_CONSENT_VERSION && existingConsent.agreedShare) {
+        setSharePreviewState({ ...sharePreviewState, isOpen: true, selectedMetricIdx: 0 });
+    } else {
+        setShareConsentState({ isOpen: true, isMinor: false, agreedShare: false, agreedPromo: false, parentConsent: false, parentName: '' });
+    }
+  };
+
+  const handleConsentSubmit = () => {
+    setUserConsents(prev => ({
+       ...prev,
+       [progressPhone]: {
+           version: CURRENT_CONSENT_VERSION,
+           agreedShare: shareConsentState.agreedShare,
+           agreedPromo: shareConsentState.agreedPromo,
+           timestamp: new Date().toISOString()
+       }
+    }));
+    setShareConsentState({ ...shareConsentState, isOpen: false });
+    setSharePreviewState({ ...sharePreviewState, isOpen: true, selectedMetricIdx: 0 });
+  };
+
+  const handleExportAndShare = async () => {
+    const svgElement = document.getElementById('share-card-svg');
+    if (!svgElement) return;
+    
+    const serializer = new XMLSerializer();
+    const svgString = serializer.serializeToString(svgElement);
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    const img = new Image();
+    const svgBlob = new Blob([svgString], { type: 'image/svg+xml;charset=utf-8' });
+    const url = URL.createObjectURL(svgBlob);
+    
+    showToast('正在產生圖卡，請稍候...');
+
+    img.onload = () => {
+        canvas.width = 1080;
+        canvas.height = sharePreviewState.format === '9:16' ? 1920 : 1080;
+        ctx.drawImage(img, 0, 0);
+        URL.revokeObjectURL(url);
+        
+        canvas.toBlob(async (blob) => {
+            const fileName = `築動進步成果_${new Date().getTime()}.png`;
+            const file = new File([blob], fileName, { type: 'image/png' });
+            
+            if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
+                try {
+                    await navigator.share({
+                        title: '我的進步成果 - 築動防護教室',
+                        text: '讓健康成為日常！這是我在築動防護教室的進步成果。',
+                        files: [file]
+                    });
+                    showToast('已成功呼叫分享！');
+                } catch (error) {
+                    if (error.name !== 'AbortError') console.error('Share error:', error);
+                }
+            } else {
+                const pngUrl = canvas.toDataURL('image/png');
+                const a = document.createElement('a');
+                a.href = pngUrl;
+                a.download = fileName;
+                a.click();
+                showToast('已將圖卡下載至您的裝置，您可以手動分享至 IG 或 LINE！');
+            }
+        }, 'image/png');
+    };
+    img.src = url;
+  };
+
+  const ShareCardSVG = ({ metric, config, myProgress }) => {
+      const isDark = config.theme === 'dark';
+      const bg = isDark ? '#353F47' : '#F2EEE7';
+      const textMain = isDark ? '#F2EEE7' : '#353F47';
+      const textSub = isDark ? '#D7D2CB' : '#64748b';
+      const accent = '#907250';
+      const w = 1080;
+      const h = config.format === '9:16' ? 1920 : 1080;
+      const studentName = myProgress[0].studentName;
+      const teacherName = myProgress[0].teacherName;
+      const weeks = Math.max(1, Math.round((new Date(myProgress[0].date) - new Date(myProgress[myProgress.length-1].date)) / (1000 * 60 * 60 * 24 * 7)));
+
+      const series = metric.series || [];
+      const min = Math.min(...series, 0);
+      const max = Math.max(...series, 10);
+      const range = (max - min) || 1;
+      const chartW = 880;
+      const chartH = config.format === '9:16' ? 500 : 300;
+      const chartX = 100;
+      const chartY = config.format === '9:16' ? 950 : 550;
+
+      const points = series.map((val, i) => {
+         const x = chartX + (i / (series.length - 1)) * chartW;
+         const y = chartY + chartH - ((val - min) / range) * chartH;
+         return `${x},${y}`;
+      }).join(' ');
+
+      return (
+        <svg id="share-card-svg" viewBox={`0 0 ${w} ${h}`} width="100%" height="100%" style={{ backgroundColor: bg, fontFamily: 'system-ui, -apple-system, "PingFang TC", "Noto Sans TC", "Microsoft JhengHei", sans-serif' }}>
+          <rect width={w} height={h} fill={bg} />
+          
+          <g transform={`translate(${w/2 - 75}, ${config.format === '9:16' ? 150 : 80})`}>
+             <circle cx="30" cy="30" r="30" fill={accent} opacity="0.8" />
+             <circle cx="90" cy="30" r="30" fill={accent} opacity="0.8" />
+             <path d="M30,2.5 C50,15 70,15 90,2.5 L90,57.5 C70,45 50,45 30,57.5 Z" fill={accent} opacity="0.8" />
+             <text x="60" y="110" fill={textMain} fontSize="32" fontWeight="bold" textAnchor="middle" letterSpacing="6">築動防護教室</text>
+          </g>
+
+          <text x={w/2} y={config.format === '9:16' ? 450 : 320} fill={textSub} fontSize="42" fontWeight="bold" textAnchor="middle">{weeks} 週防護成果</text>
+          
+          {config.showName ? (
+            <text x={w/2} y={config.format === '9:16' ? 550 : 410} fill={textMain} fontSize="56" fontWeight="bold" textAnchor="middle">{studentName} 的 {metric.metricName}</text>
+          ) : (
+            <text x={w/2} y={config.format === '9:16' ? 550 : 410} fill={textMain} fontSize="56" fontWeight="bold" textAnchor="middle">我的 {metric.metricName}</text>
+          )}
+
+          <text x={w/2} y={config.format === '9:16' ? 780 : 540} fill={accent} fontSize="160" fontWeight="900" textAnchor="middle">
+             {metric.diff > 0 ? '+' : ''}{metric.diff} <tspan fontSize="60" fill={textSub} dy="-40">{metric.unit}</tspan>
+          </text>
+
+          {series.length > 1 && (
+            <>
+              <polyline points={points} fill="none" stroke={accent} strokeWidth="12" strokeLinecap="round" strokeLinejoin="round" />
+              {series.map((val, i) => {
+                 const x = chartX + (i / (series.length - 1)) * chartW;
+                 const y = chartY + chartH - ((val - min) / range) * chartH;
+                 return (
+                   <g key={i}>
+                     <circle cx={x} cy={y} r="16" fill={bg} stroke={accent} strokeWidth="8" />
+                     {i === 0 || i === series.length - 1 ? (
+                       <text x={x} y={y - 40} fill={textSub} fontSize="36" fontWeight="bold" textAnchor="middle">{val}</text>
+                     ) : null}
+                   </g>
+                 );
+              })}
+            </>
+          )}
+
+          <text x={100} y={h - 150} fill={textMain} fontSize="48" fontWeight="bold" letterSpacing="4">讓健康成為日常</text>
+          <text x={100} y={h - 90} fill={textSub} fontSize="28">專屬防護師：{teacherName} / 掃碼體驗 ➔</text>
+          
+          <g transform={`translate(${w - 250}, ${h - 220})`}>
+             <rect width="150" height="150" fill={textMain} rx="16" />
+             <text x="75" y="85" fill={bg} fontSize="24" fontWeight="bold" textAnchor="middle">QR CODE</text>
+          </g>
+        </svg>
+      );
   };
 
   const handleAddAvailability = (e) => {
@@ -636,6 +847,24 @@ function App() {
     }
   };
 
+  const handleCoachPhotoUpload = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (event) => setCoachUploadedPhoto(event.target.result);
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleLabPhotoUpload = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (event) => setLabUploadedPhoto(event.target.result);
+      reader.readAsDataURL(file);
+    }
+  };
+
   const handleSaveAboutContent = (e) => {
     e.preventDefault();
     const formData = new FormData(e.target);
@@ -644,6 +873,8 @@ function App() {
       heroSubtitle: formData.get('heroSubtitle'),
       heroDescription: formData.get('heroDescription'),
       heroImage: aboutUploadedPhoto || aboutContent.heroImage,
+      coachTeamImage: coachUploadedPhoto || aboutContent.coachTeamImage,
+      labEnvImage: labUploadedPhoto || aboutContent.labEnvImage,
       service1Title: formData.get('service1Title'), service1Desc: formData.get('service1Desc'),
       service2Title: formData.get('service2Title'), service2Desc: formData.get('service2Desc'),
       service3Title: formData.get('service3Title'), service3Desc: formData.get('service3Desc'),
@@ -652,7 +883,10 @@ function App() {
       igName: formData.get('igName'), igLink: formData.get('igLink'),
       address: formData.get('address'), phone: formData.get('phone'), mapUrl: formData.get('mapUrl')
     });
-    showToast('品牌介紹與主視覺更新成功！');
+    setAboutUploadedPhoto('');
+    setCoachUploadedPhoto('');
+    setLabUploadedPhoto('');
+    showToast('首頁與品牌設定更新成功！');
   };
 
   const handleEventPhotoUpload = (e) => {
@@ -766,6 +1000,19 @@ function App() {
      setAppointments(prev => prev.filter(ap => ap.id !== id));
      setMyAppointments(prev => prev.filter(ap => ap.id !== id));
      showToast('已成功取消您的預約！');
+  };
+
+  const handleFeedbackSubmit = () => {
+    const newFb = {
+        id: Date.now().toString(),
+        appointmentId: feedbackModal.data.id,
+        rating: feedbackModal.rating,
+        comment: feedbackModal.comment,
+        timestamp: new Date().toISOString()
+    };
+    setFeedbacks(prev => [...prev, newFb]);
+    showToast('🎉 謝謝您的心意！我們已經確實收到您的評價囉！');
+    setFeedbackModal({ isOpen: false, data: null, rating: 5, comment: '' });
   };
 
   const handleSaveAssessment = (e) => {
@@ -888,8 +1135,15 @@ function App() {
     return Math.round(totalMins / 60);
   };
 
+  const getRoleWeight = (type) => {
+    if (type === 'owner') return 1;
+    if (type === 'fulltime') return 2;
+    return 3; // contractor
+  };
+
   // --- 教練過濾與排序 (包含 Tag 過濾) ---
   const filteredUniqueTeachers = Object.keys(teacherProfiles).filter(name => {
+    if (teacherProfiles[name].isVisible === false) return false;
     if (selectedTags.length === 0) return true;
     const tTags = Object.values(teacherProfiles[name]?.tags || {}).flat();
     // 兩步篩選：教練必須具備「所有」顧客選中的 Tag 才顯示 (AND 邏輯)
@@ -897,20 +1151,26 @@ function App() {
   }).sort((a, b) => {
     const profileA = teacherProfiles[a];
     const profileB = teacherProfiles[b];
-    if (profileA.type === 'fulltime' && profileB.type !== 'fulltime') return -1;
-    if (profileA.type !== 'fulltime' && profileB.type === 'fulltime') return 1;
+    const weightA = getRoleWeight(profileA.type);
+    const weightB = getRoleWeight(profileB.type);
+    
+    if (weightA !== weightB) return weightA - weightB;
+    
     const dateA = new Date(profileA.hireDate || '9999-12-31').getTime();
     const dateB = new Date(profileB.hireDate || '9999-12-31').getTime();
     return dateA - dateB;
   });
 
   const uniqueTeachersAll = Object.keys(teacherProfiles).sort((a,b) => {
-      if (teacherProfiles[a].type === 'fulltime' && teacherProfiles[b].type !== 'fulltime') return -1;
-      if (teacherProfiles[a].type !== 'fulltime' && teacherProfiles[b].type === 'fulltime') return 1;
-      return 0;
+      const weightA = getRoleWeight(teacherProfiles[a].type);
+      const weightB = getRoleWeight(teacherProfiles[b].type);
+      if (weightA !== weightB) return weightA - weightB;
+      const dateA = new Date(teacherProfiles[a].hireDate || '9999-12-31').getTime();
+      const dateB = new Date(teacherProfiles[b].hireDate || '9999-12-31').getTime();
+      return dateA - dateB;
   });
 
-  const displayTeachers = bookingFlowType === 'direct' ? uniqueTeachersAll : filteredUniqueTeachers;
+  const displayTeachers = bookingFlowType === 'direct' ? uniqueTeachersAll.filter(name => teacherProfiles[name].isVisible !== false) : filteredUniqueTeachers;
 
   const adminFilteredApts = adminSelectedTeacher === 'all' ? appointments : appointments.filter(ap => ap.teacherName === adminSelectedTeacher);
 
@@ -1170,9 +1430,9 @@ function App() {
           
           {/* Desktop Navigation */}
           <nav className="hidden md:flex gap-2 bg-slate-50 p-1.5 rounded-2xl items-center border border-slate-100 shadow-inner mr-4">
-            <button onClick={() => setView('customer')} className={`px-5 py-2.5 rounded-xl text-sm font-black transition-all transform shadow-sm ${view === 'customer' ? 'bg-[#1E293B] text-white shadow-md scale-105' : 'bg-white text-slate-700 hover:bg-slate-100 border border-slate-200'}`}>✨ 我要約課</button>
+            <button onClick={() => setView('home')} className={`px-5 py-2.5 rounded-xl text-sm font-black transition-all transform shadow-sm ${view === 'home' ? 'bg-[#353F47] text-[#D7D2CB] shadow-md scale-105' : 'bg-white text-slate-700 hover:bg-slate-100 border border-slate-200'}`}>🏠 首頁</button>
+            <button onClick={() => setView('customer')} className={`px-5 py-2.5 rounded-xl text-sm font-black transition-all transform shadow-sm ${view === 'customer' ? 'bg-[#1E293B] text-white shadow-md scale-105' : 'bg-white text-slate-700 hover:bg-slate-100 border border-slate-200'}`}>✨ 預約課程</button>
             <button onClick={() => setView('progress')} className={`px-5 py-2.5 rounded-xl text-sm font-black transition-all transform shadow-sm ${view === 'progress' ? 'bg-[#1E293B] text-white shadow-md scale-105' : 'bg-white text-slate-700 hover:bg-slate-100 border border-slate-200'}`}>📈 進步軌跡</button>
-            <button onClick={() => setView('about')} className={`px-4 py-2.5 rounded-xl text-sm font-bold transition-all transform shadow-sm ${view === 'about' ? 'bg-blue-500 text-white shadow-md scale-105' : 'bg-white text-blue-500 hover:bg-blue-50 border border-blue-100'}`}>📖 認識築動</button>
             <button onClick={() => setView('shop')} className={`px-4 py-2.5 rounded-xl text-sm font-bold transition-all transform shadow-sm ${view === 'shop' ? 'bg-orange-500 text-white shadow-md scale-105' : 'bg-white text-orange-500 hover:bg-orange-50 border border-orange-100'}`}>🛒 產品選購</button>
             <button onClick={() => setView('contact')} className={`px-4 py-2.5 rounded-xl text-sm font-bold transition-all transform shadow-sm ${view === 'contact' ? 'bg-emerald-600 text-white shadow-md scale-105' : 'bg-white text-emerald-600 hover:bg-emerald-50 border border-emerald-100'}`}>🤝 合作接洽</button>
           </nav>
@@ -1467,9 +1727,76 @@ function App() {
                              <button onClick={() => handleCancelMyAppointment(ap.id)} className="text-xs font-bold text-rose-500 hover:text-white border border-rose-200 hover:bg-rose-500 px-3 py-1.5 rounded-lg transition-colors">取消此預約</button>
                           </div>
                        )}
+                       {isPast && ap.attended && !feedbacks.some(f => f.appointmentId === ap.id) && (
+                          <div className="pt-3 border-t border-slate-100 mt-3 flex justify-end">
+                             <button onClick={() => setFeedbackModal({ isOpen: true, data: ap, rating: 5, comment: '' })} className="bg-amber-100 text-amber-700 hover:bg-amber-400 hover:text-white px-4 py-2 rounded-xl text-sm font-black transition-all transform hover:-translate-y-1 flex items-center gap-1.5 shadow-sm animate-pulse-once">
+                                ⭐ 補填課後滿意度
+                             </button>
+                          </div>
+                       )}
+                       {feedbacks.some(f => f.appointmentId === ap.id) && (
+                          <div className="pt-3 border-t border-slate-100 mt-3">
+                             <div className="bg-amber-50/50 p-3 rounded-xl text-xs flex justify-between items-start border border-amber-100/50 flex-col gap-2">
+                                <div className="flex justify-between w-full">
+                                   <span className="text-amber-700 font-bold flex items-center gap-1">✨ 您的滿意度評價</span>
+                                   <span className="text-amber-500 text-sm tracking-widest">{Array(feedbacks.find(f => f.appointmentId === ap.id).rating).fill('★').join('')}</span>
+                                </div>
+                                {feedbacks.find(f => f.appointmentId === ap.id).comment && (
+                                   <div className="text-slate-600 font-medium bg-white p-2.5 rounded-lg w-full border border-slate-100 leading-relaxed shadow-sm">"{feedbacks.find(f => f.appointmentId === ap.id).comment}"</div>
+                                )}
+                             </div>
+                          </div>
+                       )}
                     </div>
                   )
                })}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 課後滿意度調查 Modal (Happy Design) */}
+      {feedbackModal.isOpen && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[80] flex items-center justify-center p-4 animate-fade-in">
+          <div className="bg-white rounded-[32px] p-8 w-full max-w-sm shadow-2xl flex flex-col items-center relative overflow-hidden">
+            {/* 繽紛背景裝飾 */}
+            <div className="absolute top-0 left-0 w-full h-32 bg-gradient-to-br from-amber-300 via-orange-300 to-rose-300 -z-0 rounded-t-[32px] opacity-20"></div>
+            
+            <div className="relative z-10 w-full flex flex-col items-center">
+                <div className="text-6xl mb-4 animate-bounce drop-shadow-sm">🎉</div>
+                <h3 className="text-2xl font-black text-slate-800 mb-2 text-center">恭喜完成課程！</h3>
+                <p className="text-sm text-slate-500 mb-8 font-medium text-center">覺得今天 <span className="font-bold text-indigo-600">{feedbackModal.data.teacherName}</span> 教練的課如何呢？<br/>給我們一點回饋吧！</p>
+                
+                <div className="flex justify-between w-full gap-1 mb-6">
+                   {[
+                     { val: 1, icon: '😭', label: '待加強' },
+                     { val: 2, icon: '😕', label: '普通' },
+                     { val: 3, icon: '🙂', label: '不錯' },
+                     { val: 4, icon: '🥰', label: '滿意' },
+                     { val: 5, icon: '🤩', label: '超讚' }
+                   ].map(emoji => (
+                      <button 
+                        key={emoji.val} 
+                        onClick={() => setFeedbackModal(prev => ({...prev, rating: emoji.val}))}
+                        className={`flex flex-col items-center gap-2 transition-all transform ${feedbackModal.rating === emoji.val ? 'scale-125 -translate-y-2' : 'grayscale-[60%] opacity-60 hover:grayscale-0 hover:opacity-100 hover:scale-110'}`}
+                      >
+                         <span className="text-4xl drop-shadow-sm">{emoji.icon}</span>
+                         <span className={`text-[10px] font-bold ${feedbackModal.rating === emoji.val ? 'text-amber-600' : 'text-slate-400'}`}>{emoji.label}</span>
+                      </button>
+                   ))}
+                </div>
+
+                <textarea 
+                   placeholder="有什麼想對教練說的鼓勵或建議嗎？(選填)" 
+                   value={feedbackModal.comment}
+                   onChange={e => setFeedbackModal(prev => ({...prev, comment: e.target.value}))}
+                   className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-4 text-sm outline-none focus:border-amber-400 focus:ring-2 focus:ring-amber-100 resize-none h-24 mb-6 transition-all font-medium placeholder-slate-400"
+                ></textarea>
+
+                <div className="flex gap-3 w-full">
+                   <button onClick={() => setFeedbackModal({isOpen: false, data: null, rating: 5, comment: ''})} className="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-600 py-3.5 rounded-2xl font-bold transition-colors">下次再說</button>
+                   <button onClick={handleFeedbackSubmit} className="flex-[2] bg-gradient-to-r from-amber-400 to-orange-500 hover:from-amber-500 hover:to-orange-600 text-white py-3.5 rounded-2xl font-black text-lg shadow-lg hover:shadow-xl hover:-translate-y-0.5 transition-all">送出心意 💌</button>
+                </div>
             </div>
           </div>
         </div>
@@ -1481,138 +1808,349 @@ function App() {
         </div>
       )}
 
+      {/* 分享同意 Modal */}
+      {shareConsentState.isOpen && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-fade-in">
+          <div className="bg-white rounded-3xl p-6 w-full max-w-md shadow-xl flex flex-col max-h-[90vh]">
+            <h3 className="text-xl font-black text-slate-800 mb-2">分享前，請先確認</h3>
+            <p className="text-sm text-slate-600 mb-6 font-medium leading-relaxed">
+              分享卡會顯示你的測量進步數據與暱稱。分享後，內容可能被他人轉傳，築動防護教室無法控制第三方平台上的使用。
+            </p>
+            <div className="space-y-4 overflow-y-auto flex-1 mb-6">
+              <label className="flex items-start gap-3 p-4 bg-slate-50 rounded-2xl border border-slate-200 cursor-pointer">
+                <input type="checkbox" checked={shareConsentState.agreedShare} onChange={e => setShareConsentState({...shareConsentState, agreedShare: e.target.checked})} className="mt-1 w-5 h-5 rounded text-indigo-600" />
+                <div className="text-sm text-slate-700 font-bold">
+                  (必填) 我同意將我的測量進步數據製成分享卡，並由我自行分享到社群或通訊軟體。
+                </div>
+              </label>
+              <label className="flex items-start gap-3 p-4 bg-slate-50 rounded-2xl border border-slate-200 cursor-pointer">
+                <input type="checkbox" checked={shareConsentState.agreedPromo} onChange={e => setShareConsentState({...shareConsentState, agreedPromo: e.target.checked})} className="mt-1 w-5 h-5 rounded text-indigo-600" />
+                <div className="text-sm text-slate-700 font-bold">
+                  (選填) 我同意築動防護教室將此分享卡作為宣傳素材使用 (僅顯示暱稱，不含全名)。
+                </div>
+              </label>
+              <div className="text-xs text-slate-500 font-medium px-2">
+                查看 <a href="#" className="text-indigo-600 underline">隱私權政策</a> 與 <a href="#" className="text-indigo-600 underline">完整同意條款</a>
+              </div>
+            </div>
+            <div className="flex gap-3">
+              <button onClick={() => setShareConsentState({...shareConsentState, isOpen: false})} className="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 py-3.5 rounded-xl font-bold transition-colors">取消</button>
+              <button 
+                onClick={handleConsentSubmit} 
+                disabled={!shareConsentState.agreedShare}
+                className={`flex-1 py-3.5 rounded-xl font-bold transition-all ${shareConsentState.agreedShare ? 'bg-indigo-600 text-white shadow-md hover:bg-indigo-700' : 'bg-slate-200 text-slate-400 cursor-not-allowed'}`}
+              >
+                繼續
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 圖卡預覽與輸出 Modal */}
+      {sharePreviewState.isOpen && myProgress && (
+        <div className="fixed inset-0 bg-slate-900/80 backdrop-blur-md z-[60] flex flex-col items-center justify-center p-4 animate-fade-in">
+          <div className="w-full max-w-sm flex justify-between items-center mb-4">
+             <h3 className="text-white font-bold text-lg">預覽與分享</h3>
+             <button onClick={() => setSharePreviewState({...sharePreviewState, isOpen: false})} className="text-white/70 hover:text-white bg-white/10 p-2 rounded-full font-bold">✕</button>
+          </div>
+          
+          <div className="w-full max-w-sm bg-white rounded-3xl p-4 mb-4 shadow-2xl relative overflow-hidden flex flex-col items-center">
+             <div className="w-full relative shadow-inner border border-slate-200" style={{ aspectRatio: sharePreviewState.format === '9:16' ? '9/16' : '1/1' }}>
+                 <ShareCardSVG 
+                   metric={getShareableMetrics(myProgress)[sharePreviewState.selectedMetricIdx]} 
+                   config={sharePreviewState} 
+                   myProgress={myProgress} 
+                 />
+             </div>
+          </div>
+          
+          <div className="w-full max-w-sm bg-white p-4 rounded-3xl shadow-xl space-y-4">
+             <div className="flex gap-2">
+                <button onClick={() => setSharePreviewState({...sharePreviewState, theme: sharePreviewState.theme === 'dark' ? 'light' : 'dark'})} className="flex-1 bg-slate-100 py-2 rounded-xl text-xs font-bold text-slate-700 hover:bg-slate-200">切換深淺色</button>
+                <button onClick={() => setSharePreviewState({...sharePreviewState, format: sharePreviewState.format === '9:16' ? '1:1' : '9:16'})} className="flex-1 bg-slate-100 py-2 rounded-xl text-xs font-bold text-slate-700 hover:bg-slate-200">切換比例 ({sharePreviewState.format})</button>
+                <button onClick={() => setSharePreviewState({...sharePreviewState, showName: !sharePreviewState.showName})} className="flex-1 bg-slate-100 py-2 rounded-xl text-xs font-bold text-slate-700 hover:bg-slate-200">{sharePreviewState.showName ? '隱藏暱稱' : '顯示暱稱'}</button>
+             </div>
+             
+             {getShareableMetrics(myProgress).length > 1 && (
+               <div className="overflow-x-auto flex gap-2 pb-2 scrollbar-hide">
+                 {getShareableMetrics(myProgress).map((m, idx) => (
+                    <button key={m.id} onClick={() => setSharePreviewState({...sharePreviewState, selectedMetricIdx: idx})} className={`whitespace-nowrap px-3 py-1.5 rounded-lg text-xs font-bold border transition-colors ${sharePreviewState.selectedMetricIdx === idx ? 'bg-indigo-50 border-indigo-200 text-indigo-700' : 'bg-white border-slate-200 text-slate-500'}`}>
+                      {m.name}
+                    </button>
+                 ))}
+               </div>
+             )}
+
+             <button onClick={handleExportAndShare} className="w-full bg-gradient-to-r from-indigo-600 to-purple-600 text-white py-3.5 rounded-xl font-black text-lg shadow-md flex justify-center items-center gap-2">
+               <ShareIcon size={20} /> 立即分享 / 下載
+             </button>
+             
+             <div className="text-center mt-2">
+               <span className="text-[10px] text-slate-400 font-bold">已同意分享條款・<button onClick={() => { setSharePreviewState({...sharePreviewState, isOpen: false}); setShowPrivacySettings(true); }} className="underline hover:text-slate-600">查看或撤回</button></span>
+             </div>
+          </div>
+        </div>
+      )}
+
+      {/* 隱私與分享設定 Modal */}
+      {showPrivacySettings && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[70] flex items-center justify-center p-4 animate-fade-in">
+          <div className="bg-white rounded-3xl p-6 w-full max-w-md shadow-xl flex flex-col">
+            <div className="flex justify-between items-center mb-6">
+              <h3 className="text-xl font-black text-slate-800 flex items-center gap-2"><ShieldIcon className="text-indigo-600"/> 隱私與分享設定</h3>
+              <button onClick={() => setShowPrivacySettings(false)} className="text-slate-400 hover:text-slate-600 bg-slate-100 rounded-full p-1.5 font-bold">✕</button>
+            </div>
+            
+            <div className="space-y-4 mb-6">
+              <div className="p-4 bg-slate-50 border border-slate-100 rounded-2xl">
+                 <h4 className="font-bold text-slate-700 mb-1">您的分享授權狀態</h4>
+                 <p className="text-xs text-slate-500 mb-3">您可以在此管理圖卡生成的授權。若撤回同意，系統將不再為您產生分享卡。</p>
+                 
+                 <div className="space-y-3">
+                   <div className="flex items-center justify-between">
+                      <span className="text-sm font-bold text-slate-600">允許生成並分享進步圖卡</span>
+                      <button onClick={() => {
+                        const cur = userConsents[progressPhone] || {};
+                        setUserConsents(prev => ({...prev, [progressPhone]: {...cur, agreedShare: !cur.agreedShare}}));
+                      }} className={`w-12 h-6 rounded-full transition-colors relative shadow-inner ${userConsents[progressPhone]?.agreedShare ? 'bg-indigo-600' : 'bg-slate-300'}`}>
+                        <div className={`absolute top-1 bg-white w-4 h-4 rounded-full shadow-sm transition-transform ${userConsents[progressPhone]?.agreedShare ? 'left-7' : 'left-1'}`}></div>
+                      </button>
+                   </div>
+                   <div className="flex items-center justify-between">
+                      <span className="text-sm font-bold text-slate-600">允許作為官方匿名宣傳素材</span>
+                      <button onClick={() => {
+                        const cur = userConsents[progressPhone] || {};
+                        setUserConsents(prev => ({...prev, [progressPhone]: {...cur, agreedPromo: !cur.agreedPromo}}));
+                      }} className={`w-12 h-6 rounded-full transition-colors relative shadow-inner ${userConsents[progressPhone]?.agreedPromo ? 'bg-indigo-600' : 'bg-slate-300'}`}>
+                        <div className={`absolute top-1 bg-white w-4 h-4 rounded-full shadow-sm transition-transform ${userConsents[progressPhone]?.agreedPromo ? 'left-7' : 'left-1'}`}></div>
+                      </button>
+                   </div>
+                 </div>
+              </div>
+            </div>
+            <button onClick={() => setShowPrivacySettings(false)} className="w-full bg-[#1E293B] text-white py-3.5 rounded-xl font-bold">完成設定</button>
+          </div>
+        </div>
+      )}
+
       <main className="max-w-4xl mx-auto px-4 mt-8 mb-12">
         
-        {/* ================= ABOUT VIEW ================= */}
-        {view === 'about' && (
-          <div className="space-y-12 animate-fade-in py-6">
-            <div className="text-center max-w-3xl mx-auto">
-              <img src={aboutContent.heroImage} alt="築動 Rebuild Logo" className="h-28 md:h-40 object-contain mx-auto mb-6 mix-blend-multiply" />
-              <h2 className="text-3xl md:text-5xl font-black text-slate-800 tracking-tight mb-6 leading-tight">
-                {aboutContent.heroTitle}<br/>
-                <span className="text-indigo-600 text-2xl md:text-4xl">{aboutContent.heroSubtitle}</span>
-              </h2>
-              <p className="text-lg text-slate-600 leading-relaxed font-medium whitespace-pre-wrap">{aboutContent.heroDescription}</p>
-            </div>
+        {/* ================= HOME VIEW ================= */}
+        {view === 'home' && (
+          <div className="animate-fade-in w-full max-w-[520px] mx-auto bg-[var(--brand-light)] min-h-screen pb-16 shadow-2xl rounded-b-3xl overflow-hidden font-sans relative">
+             <style>{`
+                :root {
+                  --brand-navy: #353F47;
+                  --brand-gold: #907250;
+                  --brand-light: #F2EEE7;
+                  --brand-peanut: #D7D2CB;
+                }
+                @media (prefers-color-scheme: dark) {
+                  :root {
+                    --brand-navy: #181d21;
+                    --brand-gold: #b39470;
+                    --brand-light: #2a3136;
+                    --brand-peanut: #4a5158;
+                  }
+                }
+                .text-brand-navy { color: var(--brand-navy); }
+                .bg-brand-navy { background-color: var(--brand-navy); }
+                .text-brand-gold { color: var(--brand-gold); }
+                .bg-brand-gold { background-color: var(--brand-gold); }
+                .border-brand-gold { border-color: var(--brand-gold); }
+                .bg-brand-light { background-color: var(--brand-light); }
+                .fill-brand-peanut { fill: var(--brand-peanut); }
+                .bg-brand-peanut { background-color: var(--brand-peanut); }
+             `}</style>
+             
+             {/* 1. 首屏 Hero */}
+             <div className="bg-brand-navy text-brand-light p-8 flex flex-col items-center justify-center min-h-[80vh] relative rounded-b-[40px] shadow-sm">
+                 <div className="mb-8 w-full flex justify-center">
+                     <img 
+                       src="5B69D8EA-A3EA-4C32-8631-71F64BAC2592_2.jpg" 
+                       alt="JD Rebuild" 
+                       className="h-40 md:h-48 object-contain mx-auto invert opacity-90 mix-blend-screen"
+                     />
+                 </div>
+                 <h1 className="text-3xl font-black mb-4 tracking-widest text-center">築動防護教室</h1>
+                 <h2 className="text-2xl font-bold text-brand-gold mb-6 text-center">讓健康成為日常</h2>
+                 <p className="text-center text-sm font-medium leading-relaxed mb-10 opacity-90">用科學測量，看見自己每一次的進步。</p>
+                 <button onClick={() => { setView('customer'); setBookingStep(1); window.scrollTo(0,0); }} className="bg-brand-gold text-white px-8 py-4 rounded-full font-black text-lg shadow-lg hover:scale-105 transition-transform w-full max-w-[280px]">預約課程</button>
+             </div>
 
-            <div className="space-y-6">
-              <div className="text-center mb-8">
-                <span className="bg-indigo-100 text-indigo-800 px-4 py-1.5 rounded-full text-sm font-black tracking-widest">CORE SERVICES</span>
-                <h3 className="text-2xl font-bold text-slate-800 mt-4">我們的三大核心服務</h3>
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div className="bg-white p-8 rounded-3xl border border-slate-100 shadow-sm hover:shadow-lg transition-all group">
-                  <div className="w-16 h-16 bg-blue-50 text-blue-600 rounded-2xl flex items-center justify-center mb-6 group-hover:-translate-y-2 transition-transform shadow-sm"><HeartIcon size={32} /></div>
-                  <h4 className="text-xl font-bold text-slate-800 mb-3">{aboutContent.service1Title}</h4>
-                  <p className="text-slate-600 leading-relaxed text-sm whitespace-pre-wrap">{aboutContent.service1Desc}</p>
-                </div>
-                <div className="bg-white p-8 rounded-3xl border border-slate-100 shadow-sm hover:shadow-lg transition-all group">
-                  <div className="w-16 h-16 bg-orange-50 text-orange-600 rounded-2xl flex items-center justify-center mb-6 group-hover:-translate-y-2 transition-transform shadow-sm"><TargetIcon size={32} /></div>
-                  <h4 className="text-xl font-bold text-slate-800 mb-3">{aboutContent.service2Title}</h4>
-                  <p className="text-slate-600 leading-relaxed text-sm whitespace-pre-wrap">{aboutContent.service2Desc}</p>
-                </div>
-                <div className="bg-white p-8 rounded-3xl border border-slate-100 shadow-sm hover:shadow-lg transition-all group">
-                  <div className="w-16 h-16 bg-emerald-50 text-emerald-600 rounded-2xl flex items-center justify-center mb-6 group-hover:-translate-y-2 transition-transform shadow-sm"><ActivityIcon size={32} /></div>
-                  <h4 className="text-xl font-bold text-slate-800 mb-3">{aboutContent.service3Title}</h4>
-                  <p className="text-slate-600 leading-relaxed text-sm whitespace-pre-wrap">{aboutContent.service3Desc}</p>
-                </div>
-              </div>
-            </div>
+             {/* 2. 價值說明 */}
+             <div className="p-8 mt-4 text-brand-navy">
+                 <h3 className="text-2xl font-black mb-6 text-center tracking-wide">不只是運動<br/>是為身體築起防護</h3>
+                 <p className="text-sm leading-relaxed font-medium mb-4">我們相信，真正的健康來自於日常的累積與保養。從預防受傷、放鬆緊繃，到重整身體結構，每一堂課都依據您的個人狀態量身設計，並透過數據持續追蹤成效。</p>
+             </div>
 
-            {recentEvents.length > 0 && (
-              <div className="space-y-6 pt-6">
-                <div className="text-center mb-8">
-                  <span className="bg-amber-100 text-amber-800 px-4 py-1.5 rounded-full text-sm font-black tracking-widest">RECENT EVENTS</span>
-                  <h3 className="text-2xl font-bold text-slate-800 mt-4">近期活動與參與紀錄</h3>
+             {/* 3. 五大特色 */}
+             <div className="px-8 pb-8 text-brand-navy">
+                <ul className="space-y-6">
+                   {[
+                     { icon: '🛡️', title: '運動防護', desc: '找出容易受傷的環節，在傷害發生前先補強' },
+                     { icon: '🎯', title: '個人化防護運動訓練', desc: '依測量結果與目標，量身規劃訓練內容' },
+                     { icon: '💆', title: '軟組織放鬆', desc: '釋放緊繃的肌肉與筋膜，讓動作更順、恢復更快' },
+                     { icon: '⚖️', title: '身體結構重整', desc: '調整姿勢與力線，把身體帶回穩定、平衡的狀態' },
+                     { icon: '📈', title: '科學化', desc: '每次上課都有測量，進步看得見，不靠感覺' }
+                   ].map((feat, i) => (
+                     <li key={i} className="flex gap-4 border-b border-brand-gold/30 pb-6 last:border-0">
+                        <span className="text-2xl mt-1 opacity-90">{feat.icon}</span>
+                        <div>
+                           <h4 className="font-black text-lg mb-1">{feat.title}</h4>
+                           <p className="text-sm font-medium opacity-80 leading-relaxed">{feat.desc}</p>
+                        </div>
+                     </li>
+                   ))}
+                </ul>
+             </div>
+
+             {/* 4. 科學測量展示 */}
+             <div className="px-8 pb-12">
+                <h3 className="text-2xl font-black text-brand-navy mb-6 text-center">你的進步，用數據說話</h3>
+                <div className="bg-white p-6 rounded-3xl shadow-sm border border-brand-peanut/50 relative">
+                   <div className="flex justify-between items-center mb-4">
+                      <span className="font-bold text-sm text-brand-navy">單腳穩定度分數 (範例)</span>
+                      <span className="text-xs bg-brand-gold text-white px-2 py-1 rounded font-bold">+29 分</span>
+                   </div>
+                   <div className="h-32 w-full relative mb-3">
+                      <svg viewBox="0 0 100 50" className="w-full h-full overflow-visible">
+                         <polyline fill="none" stroke="var(--brand-gold)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" points="0,40 25,35 50,20 75,15 100,5" />
+                         <circle cx="0" cy="40" r="4" fill="var(--brand-navy)" />
+                         <circle cx="25" cy="35" r="4" fill="var(--brand-navy)" />
+                         <circle cx="50" cy="20" r="4" fill="var(--brand-navy)" />
+                         <circle cx="75" cy="15" r="4" fill="var(--brand-navy)" />
+                         <circle cx="100" cy="5" r="4" fill="var(--brand-gold)" stroke="white" strokeWidth="1.5" />
+                      </svg>
+                   </div>
+                   <div className="flex justify-between text-xs font-bold text-brand-navy/60">
+                      <span>第 1 週 (52)</span>
+                      <span>第 8 週 (81)</span>
+                   </div>
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  {recentEvents.map(ev => (
-                    <div key={ev.id} className="bg-white rounded-3xl overflow-hidden border border-slate-100 shadow-sm hover:shadow-lg transition-all group">
-                      <div className="w-full h-48 bg-slate-50 overflow-hidden relative">
-                        <img src={ev.photo} alt={ev.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
-                        <div className="absolute top-4 right-4 bg-white/90 backdrop-blur text-slate-700 px-3 py-1.5 rounded-full text-xs font-bold shadow-sm flex items-center gap-1.5"><ViewCalendarIcon size={14} /> {ev.date}</div>
+             </div>
+
+             {/* 5. 體驗課流程 */}
+             <div className="px-8 pb-12 text-brand-navy">
+                <h3 className="text-2xl font-black mb-8 text-center">約課流程</h3>
+                <div className="relative border-l-2 border-brand-gold/40 ml-4 space-y-8 pb-2">
+                   {['身體檢測', '討論目標', '實際上課', '取得報告'].map((step, i) => (
+                      <div key={i} className="relative pl-6">
+                         <div className="absolute -left-[17px] top-1 w-8 h-8 rounded-full bg-brand-gold text-white font-black text-sm flex items-center justify-center shadow-sm">{i+1}</div>
+                         <div className="bg-white p-4 rounded-2xl shadow-sm border border-brand-peanut/50 flex items-center">
+                            <h4 className="font-bold text-base">{step}</h4>
+                         </div>
                       </div>
-                      <div className="p-6">
-                        <h4 className="text-lg font-bold text-slate-800 mb-3">{ev.title}</h4>
-                        <p className="text-sm text-slate-600 leading-relaxed whitespace-pre-wrap">{ev.description}</p>
+                   ))}
+                </div>
+             </div>
+
+             {/* 6. 教練環境與見證 */}
+             <div className="px-8 pb-12">
+                <h3 className="text-2xl font-black text-brand-navy mb-6 text-center">專業教練與舒適環境</h3>
+                <div className="space-y-4 mb-8">
+                   <div className="w-full aspect-[4/3] bg-brand-peanut/30 rounded-2xl flex items-center justify-center overflow-hidden border border-brand-gold/20 relative group">
+                      <span className="text-brand-navy/50 font-bold text-sm absolute z-10 opacity-0">教練群照片</span>
+                      <img src={aboutContent.coachTeamImage || 'https://placehold.co/800x600/e2e8f0/64748b?text=Coach+Team'} alt="Coach Team" className="w-full h-full object-cover opacity-90" />
+                   </div>
+                   <div className="w-full aspect-[4/3] bg-brand-peanut/30 rounded-2xl flex items-center justify-center overflow-hidden border border-brand-gold/20 relative">
+                      <span className="text-brand-navy/50 font-bold text-sm absolute z-10 opacity-0">教室環境照片</span>
+                      <img src={aboutContent.labEnvImage || 'https://placehold.co/800x600/e2e8f0/64748b?text=Lab+Environment'} alt="Lab Environment" className="w-full h-full object-cover opacity-90" />
+                   </div>
+                </div>
+                
+                <div className="bg-white p-6 rounded-3xl shadow-sm border border-brand-gold/30 relative mt-10">
+                   <div className="text-5xl absolute -top-5 left-4 text-brand-gold opacity-30 font-serif">"</div>
+                   <p className="text-brand-navy font-bold leading-relaxed mb-4 relative z-10">「沒想到只是幾個動作的調整，長年的肩頸痠痛就改善了，而且肩膀活動度立刻增加了 <span className="text-brand-gold font-black bg-brand-gold/10 px-1 rounded">18 度</span>！」</p>
+                   <div className="text-right text-sm font-black text-brand-navy/70">- 學員 王先生 (示範數據)</div>
+                </div>
+             </div>
+
+             {/* 近期活動與動態 */}
+             {recentEvents.length > 0 && (
+               <div className="px-8 pb-12">
+                  <h3 className="text-2xl font-black text-brand-navy mb-6 text-center">近期活動與動態</h3>
+                  <div className="flex overflow-x-auto snap-x snap-mandatory gap-4 pb-4 scrollbar-hide -mx-4 px-4">
+                     {recentEvents.map(ev => (
+                        <div key={ev.id} className="snap-center shrink-0 w-[75vw] max-w-[280px] bg-white rounded-3xl overflow-hidden border border-brand-peanut/50 shadow-sm flex flex-col">
+                           <div className="w-full h-40 bg-brand-peanut/30 overflow-hidden relative">
+                              <img src={ev.photo} alt={ev.title} className="w-full h-full object-cover mix-blend-multiply" />
+                              <div className="absolute top-3 right-3 bg-white/90 backdrop-blur text-brand-navy px-2.5 py-1 rounded-full text-[10px] font-black shadow-sm">{ev.date}</div>
+                           </div>
+                           <div className="p-5 flex flex-col flex-1">
+                              <h4 className="text-lg font-black text-brand-navy mb-2">{ev.title}</h4>
+                              <p className="text-sm text-brand-navy/70 leading-relaxed font-medium line-clamp-3">{ev.description}</p>
+                           </div>
+                        </div>
+                     ))}
+                  </div>
+               </div>
+             )}
+
+             {/* 聯絡我們與社群 */}
+             <div className="px-8 pb-12 text-brand-navy">
+                <h3 className="text-2xl font-black mb-6 text-center">聯絡與關注我們</h3>
+                <div className="flex flex-col gap-4">
+                   <a href={aboutContent.lineLink} target="_blank" rel="noreferrer" className="bg-white p-4 rounded-3xl border border-brand-peanut/60 shadow-sm flex items-center gap-4 hover:shadow-md hover:border-brand-gold transition-all group">
+                      <div className="w-14 h-14 bg-[#06C755] text-white rounded-2xl flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform shadow-sm rotate-3 group-hover:rotate-0">
+                         <MessageCircleIcon size={28} />
                       </div>
-                    </div>
-                  ))}
+                      <div className="flex-1">
+                         <div className="font-black text-brand-navy text-lg mb-1">與專人一對一諮詢</div>
+                         <div className="text-xs font-bold opacity-70 text-brand-navy bg-brand-light/80 inline-block px-2 py-0.5 rounded">{aboutContent.lineId}</div>
+                      </div>
+                      <div className="text-brand-gold opacity-50 pr-2 group-hover:opacity-100 group-hover:translate-x-1 transition-all">➔</div>
+                   </a>
+                   <a href={aboutContent.igLink} target="_blank" rel="noreferrer" className="bg-white p-4 rounded-3xl border border-brand-peanut/60 shadow-sm flex items-center gap-4 hover:shadow-md hover:border-brand-gold transition-all group">
+                      <div className="w-14 h-14 bg-gradient-to-tr from-[#F58529] via-[#DD2A7B] to-[#8134AF] text-white rounded-2xl flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform shadow-sm -rotate-3 group-hover:rotate-0">
+                         <FaInstagram size={28} />
+                      </div>
+                      <div className="flex-1">
+                         <div className="font-black text-brand-navy text-lg mb-1">看更多築動的日常</div>
+                         <div className="text-xs font-bold opacity-70 text-brand-navy bg-brand-light/80 inline-block px-2 py-0.5 rounded">{aboutContent.igName}</div>
+                      </div>
+                      <div className="text-brand-gold opacity-50 pr-2 group-hover:opacity-100 group-hover:translate-x-1 transition-all">➔</div>
+                   </a>
                 </div>
-              </div>
-            )}
+             </div>
 
-            {/* --- 新增：聯絡資訊與社群連結 --- */}
-            <div className="space-y-6 pt-10 mt-10">
-              <div className="text-center mb-8">
-                <span className="bg-indigo-100 text-indigo-800 px-4 py-1.5 rounded-full text-sm font-black tracking-widest">CONTACT & LOCATION</span>
-                <h3 className="text-2xl font-bold text-slate-800 mt-4">聯絡我們與交通資訊</h3>
-              </div>
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-8 bg-white p-6 md:p-8 rounded-3xl border border-slate-100 shadow-sm">
-                {/* 左側：社群與聯絡方式 */}
-                <div className="space-y-6">
-                   <h4 className="text-xl font-bold text-slate-800 mb-4 flex items-center gap-2"><MessageSquareIcon className="text-indigo-600"/> 關注與聯繫</h4>
-                   <p className="text-slate-600 text-sm leading-relaxed">有任何課程問題或想了解更多防護知識，歡迎透過以下方式聯繫我們，或追蹤我們的社群平台獲取最新資訊！</p>
-                   
-                   <div className="flex flex-col gap-4 mt-6">
-                     <a href={aboutContent.lineLink} target="_blank" rel="noreferrer" className="flex items-center gap-4 p-3 rounded-2xl border border-slate-100 hover:border-indigo-300 hover:bg-indigo-50 transition-colors group">
-                        <div className="w-12 h-12 bg-[#06C755] text-white rounded-full flex items-center justify-center shrink-0 shadow-sm group-hover:scale-105 transition-transform">
-                          <MessageCircleIcon size={24} />
-                        </div>
-                        <div>
-                          <div className="font-bold text-slate-800">LINE 官方帳號</div>
-                          <div className="text-xs text-slate-500">{aboutContent.lineId}</div>
-                        </div>
-                     </a>
-                     <a href={aboutContent.fbLink} target="_blank" rel="noreferrer" className="flex items-center gap-4 p-3 rounded-2xl border border-slate-100 hover:border-blue-300 hover:bg-blue-50 transition-colors group">
-                        <div className="w-12 h-12 bg-[#1877F2] text-white rounded-full flex items-center justify-center shrink-0 shadow-sm group-hover:scale-105 transition-transform">
-                          <FacebookIcon size={24} />
-                        </div>
-                        <div>
-                          <div className="font-bold text-slate-800">Facebook 粉絲專頁</div>
-                          <div className="text-xs text-slate-500">{aboutContent.fbName}</div>
-                        </div>
-                     </a>
-                     <a href={aboutContent.igLink} target="_blank" rel="noreferrer" className="flex items-center gap-4 p-3 rounded-2xl border border-slate-100 hover:border-pink-300 hover:bg-pink-50 transition-colors group">
-                        <div className="w-12 h-12 bg-gradient-to-tr from-[#F58529] via-[#DD2A7B] to-[#8134AF] text-white rounded-full flex items-center justify-center shrink-0 shadow-sm group-hover:scale-105 transition-transform">
-                          <InstagramIcon size={24} />
-                        </div>
-                        <div>
-                          <div className="font-bold text-slate-800">Instagram</div>
-                          <div className="text-xs text-slate-500">{aboutContent.igName}</div>
-                        </div>
-                     </a>
-                   </div>
+             {/* 7. 常見問題 */}
+             <div className="px-8 pb-16 text-brand-navy">
+                <h3 className="text-2xl font-black mb-6 text-center">常見問題</h3>
+                <div className="space-y-3">
+                   {[
+                     { q: '沒有運動習慣也能上課嗎？', a: '當然可以！我們的課程會根據您目前的身體狀況量身打造，從最基礎的動作控制開始。' },
+                     { q: '上課需要準備什麼？', a: '請穿著舒適、方便活動的運動服飾，並攜帶水壺與毛巾即可。' },
+                     { q: '有舊傷可以參加嗎？', a: '可以的。但請在預約時詳細填寫您的受傷史，我們會為您安排合適的防護與訓練內容。' },
+                     { q: '企業或團體可以合作嗎？', a: '可以，我們提供外派講座與團體包班服務，歡迎透過底部的「合作接洽」與我們聯繫。' }
+                   ].map((faq, i) => (
+                     <div key={i} className="bg-white rounded-2xl overflow-hidden border border-brand-peanut/60 transition-all">
+                        <button onClick={() => setFaqOpen(faqOpen === i ? null : i)} className="w-full text-left p-4 font-bold flex justify-between items-center outline-none focus:bg-brand-light/30">
+                           {faq.q}
+                           <span className={`text-brand-gold transition-transform duration-300 ${faqOpen === i ? 'rotate-180' : ''}`}>▼</span>
+                        </button>
+                        {faqOpen === i && <div className="p-4 pt-0 text-sm text-brand-navy/80 font-medium bg-brand-light/20 leading-relaxed border-t border-brand-peanut/20">{faq.a}</div>}
+                     </div>
+                   ))}
                 </div>
+             </div>
 
-                {/* 右側：地圖與地址 */}
-                <div className="space-y-6">
-                   <h4 className="text-xl font-bold text-slate-800 mb-4 flex items-center gap-2"><MapPinIcon className="text-rose-500"/> 交通位置</h4>
-                   <div className="w-full h-64 bg-slate-100 rounded-2xl overflow-hidden border border-slate-200">
-                      <iframe 
-                        src={aboutContent.mapUrl} 
-                        width="100%" 
-                        height="100%" 
-                        style={{ border: 0 }} 
-                        allowFullScreen="" 
-                        loading="lazy" 
-                        referrerPolicy="no-referrer-when-downgrade">
-                      </iframe>
-                   </div>
-                   <div className="bg-slate-50 p-4 rounded-xl border border-slate-100 space-y-2">
-                     <div className="flex items-start gap-2 text-sm">
-                       <MapPinIcon size={16} className="text-slate-400 mt-0.5 shrink-0" />
-                       <span className="text-slate-700 font-bold">{aboutContent.address}</span>
-                     </div>
-                     <div className="flex items-start gap-2 text-sm">
-                       <PhoneIcon size={16} className="text-slate-400 mt-0.5 shrink-0" />
-                       <span className="text-slate-700 font-bold">{aboutContent.phone}</span>
-                     </div>
-                   </div>
-                </div>
-              </div>
-            </div>
+             {/* 8. 結尾區塊 Footer */}
+             <div className="bg-brand-navy text-brand-light p-10 pt-12 pb-24 text-center rounded-t-[40px]">
+                <h2 className="text-3xl font-black mb-3">讓健康成為日常</h2>
+                <p className="text-sm opacity-80 mb-8 font-medium">踏出改變的第一步，我們在築動等您。</p>
+                <button onClick={() => { setView('customer'); setBookingStep(1); window.scrollTo(0,0); }} className="bg-brand-gold text-white px-8 py-4 rounded-full font-black text-lg shadow-lg hover:scale-105 transition-transform w-full max-w-[280px]">預約課程</button>
+             </div>
+          </div>
+        )}
+
+        {/* 懸浮底部：固定預約按鈕 (僅在首頁顯示) */}
+        {view === 'home' && (
+          <div className="fixed bottom-[70px] md:bottom-6 left-0 right-0 px-4 pointer-events-none flex justify-center z-40 animate-fade-in">
+             <button onClick={() => { setView('customer'); setBookingStep(1); window.scrollTo(0,0); }} className="pointer-events-auto bg-brand-gold text-white px-8 py-4 rounded-full font-black text-lg shadow-[0_8px_20px_rgba(144,114,80,0.4)] hover:scale-105 transition-transform w-full max-w-[460px]">
+                預約課程
+             </button>
           </div>
         )}
 
@@ -1632,7 +2170,7 @@ function App() {
                   </div>
                   <div>
                     <span className="block font-bold text-slate-700">{name}</span>
-                    <span className="text-[10px] text-slate-400">{teacherProfiles[name].type === 'fulltime' ? '正職人員' : '承攬人員'}</span>
+                    <span className="text-[10px] text-slate-400">{teacherProfiles[name].type === 'owner' ? '負責人' : teacherProfiles[name].type === 'fulltime' ? '正職人員' : '承攬人員'}</span>
                   </div>
                 </button>
               ))}
@@ -1744,6 +2282,19 @@ function App() {
                                 <button onClick={() => handleToggleAttendance(ap.id)} className={`px-4 py-2 rounded-xl text-sm font-bold transition-colors shadow-sm ${ap.attended ? 'bg-emerald-500 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>
                                   {ap.attended ? '已報到 ✓' : '點擊報到'}
                                 </button>
+                                
+                                {/* 新增：邀請評價與已評徽章 */}
+                                {ap.attended && (!feedbacks || !feedbacks.some(f => f.appointmentId === ap.id)) && (
+                                   <button onClick={() => setFeedbackModal({ isOpen: true, data: ap, rating: 5, comment: '' })} className="px-3 py-2 rounded-xl text-sm font-black transition-all shadow-sm bg-amber-100 text-amber-700 hover:bg-amber-400 hover:text-white flex items-center gap-1">
+                                      ⭐ 邀請評價
+                                   </button>
+                                )}
+                                {ap.attended && feedbacks && feedbacks.some(f => f.appointmentId === ap.id) && (
+                                   <span className="text-xs font-bold text-amber-500 bg-amber-50 px-3 py-2 rounded-xl border border-amber-100 flex items-center gap-1">
+                                      ⭐ {feedbacks.find(f => f.appointmentId === ap.id).rating} 星已評
+                                   </span>
+                                )}
+
                                 <button onClick={() => handleCancelAppointment(ap.id)} className="text-sm text-red-500 bg-red-50 hover:bg-red-100 hover:text-red-600 px-3 py-2 rounded-xl font-bold transition-colors">取消預約</button>
                               </div>
                             </div>
@@ -1800,7 +2351,7 @@ function App() {
                       onClick={() => { setBookingFlowType('guided'); setSelectedTeacher('all'); setBookingIntent(null); setSelectedTags([]); }}
                       className={`flex-1 px-4 py-3.5 rounded-xl text-sm md:text-base font-bold transition-all ${bookingFlowType === 'guided' ? 'bg-white text-indigo-700 shadow-sm ring-1 ring-black/5' : 'text-slate-500 hover:text-slate-700'}`}
                     >
-                      🔍 依需求找教練 (初次體驗)
+                      🔍 依需求找教練 (初次上課)
                     </button>
                     <button 
                       onClick={() => { setBookingFlowType('direct'); setSelectedTeacher('all'); setBookingIntent(null); setSelectedTags([]); }}
@@ -1874,7 +2425,7 @@ function App() {
                         目前沒有符合所有所選標籤的教練 🥺<br/>請嘗試減少一些篩選條件！
                       </div>
                     ) : (
-                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-5">
                         {displayTeachers.map(name => {
                           const profile = teacherProfiles[name];
                           const hashtags = Object.values(profile.tags || {}).flat();
@@ -1887,24 +2438,29 @@ function App() {
                                 setBookingStep(2);
                                 scrollToStep();
                               }}
-                              className="bg-white rounded-2xl p-3 md:p-4 border border-slate-100 flex gap-3 items-center transition-all cursor-pointer group hover:shadow-md hover:border-[#c1955b] active:scale-[0.98]"
+                              className="bg-white rounded-2xl p-5 border-2 flex flex-col gap-4 transition-all cursor-pointer group border-slate-100 hover:shadow-lg hover:border-[#c1955b] hover:-translate-y-1 active:scale-[0.98]"
                             >
-                              <div className="w-14 h-14 bg-slate-100 text-slate-400 rounded-full flex items-center justify-center shrink-0 overflow-hidden shadow-sm border border-slate-200">
-                                {profile.photo ? <img src={profile.photo} alt={name} className="w-full h-full object-cover" /> : <UserIcon size={20} />}
-                              </div>
-                              <div className="flex-1 min-w-0">
-                                <div className="flex justify-between items-center mb-0.5">
-                                   <h3 className="font-bold text-base text-slate-800 truncate">{name}</h3>
-                                   <span className="text-[10px] font-bold text-white bg-[#1E293B] px-2 py-1 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity shrink-0">選擇</span>
+                              <div className="flex gap-4 items-start">
+                                <div className="w-16 h-16 bg-slate-100 text-slate-400 rounded-full flex items-center justify-center shrink-0 overflow-hidden shadow-sm border-2 border-white">
+                                  {profile.photo ? <img src={profile.photo} alt={name} className="w-full h-full object-cover" /> : <UserIcon size={24} />}
                                 </div>
-                                <p className="text-[11px] text-slate-500 font-medium truncate mb-1.5" title={profile.description}>{profile.description || getPrimarySpecialty(profile)}</p>
-                                <div className="flex flex-wrap gap-1 h-[20px] overflow-hidden">
+                                <div className="flex-1">
+                                  <h3 className="font-bold text-xl text-slate-800 mb-1">{name}</h3>
+                                  {profile.quote && <div className="text-xs md:text-sm font-bold text-[#c1955b] mb-2">「{profile.quote}」</div>}
+                                  <p className="text-xs md:text-sm text-slate-600 font-medium leading-relaxed line-clamp-2">{profile.description}</p>
+                                </div>
+                              </div>
+                              <div className="flex items-center justify-between pt-3 mt-auto border-t border-slate-50">
+                                <div className="flex flex-wrap gap-1.5 flex-1">
                                   {hashtags.slice(0, 3).map(tag => (
-                                    <span key={tag} className="text-[9px] px-1.5 py-0.5 rounded bg-slate-50 text-slate-500 font-bold whitespace-nowrap group-hover:bg-amber-50 group-hover:text-[#c1955b] transition-colors border border-slate-100">
+                                    <span key={tag} className="text-[10px] px-2 py-1 rounded bg-slate-100 text-slate-500 font-bold whitespace-nowrap group-hover:bg-amber-50 group-hover:text-[#c1955b] transition-colors">
                                       #{tag}
                                     </span>
                                   ))}
                                 </div>
+                                <span className="text-[11px] font-bold text-white bg-[#1E293B] px-3 py-1.5 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity ml-2 shrink-0 shadow-sm">
+                                  選擇他 ➔
+                                </span>
                               </div>
                             </div>
                           );
@@ -1937,7 +2493,7 @@ function App() {
                           <button type="button" onClick={() => setBookingDuration(90)} className={`p-3 md:p-4 rounded-2xl border-2 text-center transition-all relative overflow-hidden flex flex-col justify-center items-center ${bookingDuration === 90 ? 'border-[#c1955b] bg-amber-50 shadow-md scale-105' : 'border-slate-100 bg-white hover:bg-slate-50'}`}>
                             <div className="absolute top-0 right-0 bg-gradient-to-r from-amber-400 to-[#c1955b] text-white text-[9px] font-black px-2 py-0.5 rounded-bl-lg shadow-sm">推薦</div>
                             <div className={`font-black text-xl md:text-2xl ${bookingDuration === 90 ? 'text-[#9b7342]' : 'text-slate-600'}`}>90<span className="text-xs md:text-sm font-bold">m</span></div>
-                            <div className={`text-xs mt-1 font-bold ${bookingDuration === 90 ? 'text-[#b08853]' : 'text-slate-400'}`}>完整體驗</div>
+                            <div className={`text-xs mt-1 font-bold ${bookingDuration === 90 ? 'text-[#b08853]' : 'text-slate-400'}`}>完整課程</div>
                           </button>
                           <button type="button" onClick={() => setBookingDuration(120)} className={`p-3 md:p-4 rounded-2xl border-2 text-center transition-all flex flex-col justify-center items-center ${bookingDuration === 120 ? 'border-slate-800 bg-slate-50 shadow-md scale-105' : 'border-slate-100 bg-white hover:bg-slate-50'}`}>
                             <div className={`font-black text-xl md:text-2xl ${bookingDuration === 120 ? 'text-slate-800' : 'text-slate-600'}`}>120<span className="text-xs md:text-sm font-bold">m</span></div>
@@ -2123,6 +2679,10 @@ function App() {
                     <p className="text-slate-600 text-sm font-bold mb-4 bg-slate-100 inline-block px-4 py-1.5 rounded-full border border-slate-200 mt-2">
                       這是您在築動努力的第 <span className="text-[#c1955b] text-lg font-black">{myProgress.length}</span> 堂課 🎉
                     </p>
+                    {/* 隱私設定按鈕 */}
+                    <button onClick={() => setShowPrivacySettings(true)} className="text-xs font-bold text-slate-400 hover:text-slate-600 flex items-center justify-center gap-1 mx-auto mt-2 bg-white px-3 py-1.5 rounded-full border border-slate-200 shadow-sm transition-colors">
+                       <ShieldIcon size={12} /> 隱私與分享設定
+                    </button>
                   </div>
                 )}
 
@@ -2138,6 +2698,22 @@ function App() {
                     {/* NEW: 專屬進步亮點卡片 (Before vs After) */}
                     {renderAchievementCard(myProgress)}
                     
+                    {/* NEW: 分享按鈕入口 */}
+                    {myProgress.length >= 2 ? (
+                        <div className="px-4">
+                            <button onClick={handleShareClick} className="w-full bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white py-4 rounded-2xl font-black text-lg shadow-lg hover:shadow-xl transition-all flex justify-center items-center gap-2 transform active:scale-95">
+                               <SparklesIcon size={20} /> 分享我的進步成果
+                            </button>
+                            <p className="text-center text-[10px] text-slate-400 font-bold mt-2">一鍵生成精美圖卡，分享至 IG 或 LINE</p>
+                        </div>
+                    ) : (
+                        <div className="px-4 text-center">
+                            <div className="bg-slate-100 text-slate-500 py-3 rounded-2xl font-bold text-sm border border-slate-200">
+                               💡 再多測一次就能解鎖您的進步分享卡喔！
+                            </div>
+                        </div>
+                    )}
+
                     {/* 2. 核心視覺：五大要素雷達圖 (Radar Chart) */}
                     {(() => {
                         const latest = myProgress[0].metrics;
@@ -2441,7 +3017,16 @@ function App() {
                         <tr key={ap.id} className="hover:bg-slate-50/50 transition-colors">
                           <td className="p-4 text-sm text-slate-800 font-bold">{ap.date} {ap.startTime}-{ap.endTime} ({ap.duration}m)</td>
                           <td className="p-4 text-sm text-slate-800 font-medium">{ap.teacherName}</td>
-                          <td className="p-4 text-sm font-bold text-slate-700">{ap.studentName}<div className="text-xs font-normal text-slate-400 mt-1 flex items-center gap-1">📞 {ap.phone || '未提供'}</div></td>
+                          <td className="p-4 text-sm font-bold text-slate-700">
+                             {ap.studentName}
+                             <div className="text-xs font-normal text-slate-400 mt-1 flex items-center gap-1">📞 {ap.phone || '未提供'}</div>
+                             {feedbacks.find(f => f.appointmentId === ap.id) && (
+                                <div className="mt-2 bg-amber-50 border border-amber-100 p-2 rounded-lg shadow-sm">
+                                   <div className="text-amber-500 text-[10px] tracking-widest mb-0.5">{Array(feedbacks.find(f => f.appointmentId === ap.id).rating).fill('★').join('')}</div>
+                                   {feedbacks.find(f => f.appointmentId === ap.id).comment && <div className="text-[10px] text-slate-600 font-medium mt-1">"{feedbacks.find(f => f.appointmentId === ap.id).comment}"</div>}
+                                </div>
+                             )}
+                          </td>
                           <td className="p-4 text-sm text-slate-600"><span className={`px-3 py-1 rounded-md text-xs font-bold border ${ap.attended ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-slate-50 text-slate-500 border-slate-200'}`}>{ap.attended ? '已報到 ✓' : '未報到'}</span></td>
                           <td className="p-4 text-sm text-slate-600 flex gap-2">
                             <button onClick={() => setEditModal({ isOpen: true, type: 'appointment', data: ap })} className="bg-slate-100 hover:bg-indigo-100 text-slate-600 hover:text-indigo-700 px-2 py-1.5 rounded text-xs font-bold transition-colors">修改</button>
@@ -2469,7 +3054,11 @@ function App() {
                         <div className="grid grid-cols-2 gap-2">
                           <div className="space-y-1">
                             <label className="text-xs font-medium text-slate-500">聘僱屬性</label>
-                            <select name="type" defaultValue={teacherProfiles[editingProfileName]?.type || 'contractor'} className="w-full px-3 py-2 rounded-lg border border-slate-200 text-sm outline-none font-medium"><option value="contractor">承攬人員</option><option value="fulltime">正職人員</option></select>
+                            <select name="type" defaultValue={teacherProfiles[editingProfileName]?.type || 'contractor'} className="w-full px-3 py-2 rounded-lg border border-slate-200 text-sm outline-none font-medium">
+                               <option value="owner">負責人</option>
+                               <option value="fulltime">正職人員</option>
+                               <option value="contractor">承攬人員</option>
+                            </select>
                           </div>
                           <div className="space-y-1">
                             <label className="text-xs font-medium text-slate-500">入職日期</label>
@@ -2560,16 +3149,22 @@ function App() {
                         {uniqueTeachersAll.map(name => {
                           const profile = teacherProfiles[name];
                           return (
-                            <div key={name} className={`p-4 rounded-xl border bg-white shadow-sm flex flex-col gap-3 transition-all relative ${editingProfileName === name ? 'border-indigo-400 ring-2 ring-indigo-50' : 'border-slate-100'}`}>
+                            <div key={name} className={`p-4 rounded-xl border shadow-sm flex flex-col gap-3 transition-all relative ${editingProfileName === name ? 'border-indigo-400 ring-2 ring-indigo-50 bg-white' : profile.isVisible === false ? 'bg-slate-50 border-slate-200 opacity-75' : 'bg-white border-slate-100'}`}>
                               <div className="absolute top-4 right-4 flex gap-2">
+                                 <button onClick={() => handleToggleTeacherVisibility(name)} className={`p-1 rounded-md transition-colors ${profile.isVisible === false ? 'bg-slate-200 text-slate-500 hover:bg-slate-300' : 'bg-emerald-50 text-emerald-600 hover:bg-emerald-100'}`} title={profile.isVisible === false ? "目前已隱藏，點擊顯示" : "目前顯示中，點擊隱藏"}>
+                                   {profile.isVisible === false ? <EyeOffIcon size={14} /> : <EyeIcon size={14} />}
+                                 </button>
                                  <button onClick={() => loadProfileForEdit(name)} className="bg-slate-100 hover:bg-indigo-100 text-slate-500 hover:text-indigo-600 p-1 rounded-md transition-colors"><EditIcon size={14} /></button>
                               </div>
                               <div className="flex items-center gap-3">
                                 <div className="w-12 h-12 rounded-full overflow-hidden bg-slate-100 shrink-0 border border-slate-200">
                                    {profile.photo ? <img src={profile.photo} alt={name} className="w-full h-full object-cover" /> : <UserIcon className="w-full h-full p-2 text-slate-400" />}
                                 </div>
-                                <div className="flex flex-col pr-6">
-                                  <span className="font-bold text-slate-800 break-all">{name}</span>
+                                <div className="flex flex-col pr-12">
+                                  <span className="font-bold text-slate-800 break-all flex items-center gap-2">
+                                    {name}
+                                    {profile.isVisible === false && <span className="text-[10px] bg-slate-200 text-slate-500 px-1.5 py-0.5 rounded font-bold">已隱藏</span>}
+                                  </span>
                                   <span className="text-[11px] bg-indigo-50 text-indigo-700 px-2 py-0.5 rounded-md font-bold w-fit mt-1">{getPrimarySpecialty(profile)}</span>
                                 </div>
                               </div>
@@ -2785,23 +3380,55 @@ function App() {
                              <input type="text" name="heroSubtitle" defaultValue={aboutContent.heroSubtitle} className="w-full px-4 py-2.5 rounded-xl border border-slate-200 outline-none text-sm text-slate-600" required />
                           </div>
                           <div className="space-y-1">
-                             <label className="text-xs font-bold text-slate-500">品牌介紹內文</label>
+                             <label className="text-xs font-bold text-slate-500">首頁歡迎內文</label>
                              <textarea name="heroDescription" defaultValue={aboutContent.heroDescription} rows="4" className="w-full px-4 py-2.5 rounded-xl border border-slate-200 outline-none resize-none text-sm text-slate-600 leading-relaxed" required></textarea>
                           </div>
                        </div>
-                       <div className="space-y-2">
-                          <label className="text-xs font-bold text-slate-500 block">品牌主視覺 Logo 或圖片</label>
-                          <div className="w-full h-48 bg-white rounded-2xl border border-slate-200 flex flex-col items-center justify-center relative overflow-hidden group">
-                             {aboutUploadedPhoto || aboutContent.heroImage ? (
-                               <img src={aboutUploadedPhoto || aboutContent.heroImage} alt="Brand Hero" className="w-full h-full object-contain mix-blend-multiply" />
-                             ) : (
-                               <ImageIcon className="text-slate-300 w-12 h-12 mb-2" />
-                             )}
-                             <div className="absolute inset-0 bg-slate-900/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                               <label className="bg-white text-slate-800 px-4 py-2 rounded-lg font-bold text-sm cursor-pointer shadow-lg hover:scale-105 transition-transform">
-                                 更換圖片 <input type="file" accept="image/*" onChange={handleAboutPhotoUpload} className="hidden" />
-                               </label>
-                             </div>
+                       <div className="space-y-4">
+                          <div className="space-y-2">
+                            <label className="text-xs font-bold text-slate-500 block">品牌 Logo (供其他頁面使用)</label>
+                            <div className="w-full h-24 bg-white rounded-2xl border border-slate-200 flex items-center justify-center relative overflow-hidden group">
+                               {aboutUploadedPhoto || aboutContent.heroImage ? (
+                                 <img src={aboutUploadedPhoto || aboutContent.heroImage} alt="Brand Hero" className="h-full object-contain mix-blend-multiply" />
+                               ) : (
+                                 <ImageIcon className="text-slate-300 w-8 h-8" />
+                               )}
+                               <div className="absolute inset-0 bg-slate-900/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                                 <label className="bg-white text-slate-800 px-3 py-1.5 rounded font-bold text-xs cursor-pointer shadow-lg">
+                                   更換 <input type="file" accept="image/*" onChange={handleAboutPhotoUpload} className="hidden" />
+                                 </label>
+                               </div>
+                            </div>
+                          </div>
+                          <div className="space-y-2">
+                            <label className="text-xs font-bold text-slate-500 block">首頁：教練群照片 (建議 4:3)</label>
+                            <div className="w-full h-28 bg-white rounded-2xl border border-slate-200 flex items-center justify-center relative overflow-hidden group">
+                               {coachUploadedPhoto || aboutContent.coachTeamImage ? (
+                                 <img src={coachUploadedPhoto || aboutContent.coachTeamImage} alt="Coach Team" className="w-full h-full object-cover" />
+                               ) : (
+                                 <ImageIcon className="text-slate-300 w-8 h-8" />
+                               )}
+                               <div className="absolute inset-0 bg-slate-900/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                                 <label className="bg-white text-slate-800 px-3 py-1.5 rounded font-bold text-xs cursor-pointer shadow-lg">
+                                   更換 <input type="file" accept="image/*" onChange={handleCoachPhotoUpload} className="hidden" />
+                                 </label>
+                               </div>
+                            </div>
+                          </div>
+                          <div className="space-y-2">
+                            <label className="text-xs font-bold text-slate-500 block">首頁：教室環境照片 (建議 4:3)</label>
+                            <div className="w-full h-28 bg-white rounded-2xl border border-slate-200 flex items-center justify-center relative overflow-hidden group">
+                               {labUploadedPhoto || aboutContent.labEnvImage ? (
+                                 <img src={labUploadedPhoto || aboutContent.labEnvImage} alt="Lab Environment" className="w-full h-full object-cover" />
+                               ) : (
+                                 <ImageIcon className="text-slate-300 w-8 h-8" />
+                               )}
+                               <div className="absolute inset-0 bg-slate-900/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                                 <label className="bg-white text-slate-800 px-3 py-1.5 rounded font-bold text-xs cursor-pointer shadow-lg">
+                                   更換 <input type="file" accept="image/*" onChange={handleLabPhotoUpload} className="hidden" />
+                                 </label>
+                               </div>
+                            </div>
                           </div>
                        </div>
                      </div>
@@ -3016,9 +3643,9 @@ function App() {
 
       {/* Mobile Bottom Navigation Bar */}
       <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 z-50 flex justify-between items-center px-1 pb-safe shadow-[0_-4px_10px_rgba(0,0,0,0.05)]">
+         <button onClick={() => setView('home')} className={`flex flex-col items-center justify-center w-full py-3 transition-colors ${view === 'home' ? 'text-[#353F47]' : 'text-slate-400 hover:text-slate-600'}`}><InfoIcon size={22}/><span className="text-[10px] font-bold mt-1">首頁</span></button>
          <button onClick={() => setView('customer')} className={`flex flex-col items-center justify-center w-full py-3 transition-colors ${view === 'customer' ? 'text-indigo-600' : 'text-slate-400 hover:text-slate-600'}`}><ViewCalendarIcon size={22}/><span className="text-[10px] font-bold mt-1">約課</span></button>
          <button onClick={() => setView('progress')} className={`flex flex-col items-center justify-center w-full py-3 transition-colors ${view === 'progress' ? 'text-indigo-600' : 'text-slate-400 hover:text-slate-600'}`}><ActivityIcon size={22}/><span className="text-[10px] font-bold mt-1">進步</span></button>
-         <button onClick={() => setView('about')} className={`flex flex-col items-center justify-center w-full py-3 transition-colors ${view === 'about' ? 'text-blue-500' : 'text-slate-400 hover:text-slate-600'}`}><InfoIcon size={22}/><span className="text-[10px] font-bold mt-1">品牌</span></button>
          <button onClick={() => setView('shop')} className={`flex flex-col items-center justify-center w-full py-3 transition-colors ${view === 'shop' ? 'text-orange-500' : 'text-slate-400 hover:text-slate-600'}`}><ShoppingCartIcon size={22}/><span className="text-[10px] font-bold mt-1">商城</span></button>
          <button onClick={() => setView('contact')} className={`flex flex-col items-center justify-center w-full py-3 transition-colors ${view === 'contact' ? 'text-emerald-500' : 'text-slate-400 hover:text-slate-600'}`}><MessageSquareIcon size={22}/><span className="text-[10px] font-bold mt-1">接洽</span></button>
       </div>
@@ -3026,4 +3653,3 @@ function App() {
     </div>
   );
 }
-export default App;
